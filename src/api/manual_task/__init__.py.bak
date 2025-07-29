@@ -1,0 +1,310 @@
+
+from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel, Field
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+
+from src.services.manual_imputation_service import ManualImputationService
+
+router = APIRouter()
+
+# Pydantic models for request/response
+class AttributeData(BaseModel):
+    name: str
+    value: str
+    unit: Optional[str] = None
+
+class ExtraData(BaseModel):
+    name: str
+    value: str
+
+class DocumentData(BaseModel):
+    url: str
+    type: Optional[str] = "document"
+    description: Optional[str] = ""
+
+class SellerData(BaseModel):
+    name: str
+    type: Optional[str] = "distributor"
+
+class ManualImputationRequest(BaseModel):
+    part_number: str = Field(..., description="Part number to update")
+    editor: str = Field(..., description="Username of the editor")
+    notes: Optional[str] = Field(None, description="Notes about the changes")
+    source_url: Optional[str] = Field(None, description="Source URL for traceability")
+    batch_id: Optional[str] = Field(None, description="Batch identifier for grouping")
+    
+    # Data to update
+    attributes: Optional[List[AttributeData]] = Field(None, description="Product attributes to add/update")
+    extras: Optional[List[ExtraData]] = Field(None, description="Product extras to add/update")
+    documents: Optional[List[DocumentData]] = Field(None, description="Documents/media to add")
+    sellers: Optional[List[SellerData]] = Field(None, description="Sellers to add")
+
+class ManualImputationResponse(BaseModel):
+    status: str
+    message: str
+    task_id: Optional[int] = None
+    part_number: Optional[str] = None
+    affected_tables: Optional[List[str]] = None
+    changes_count: Optional[int] = None
+
+class TaskHistoryResponse(BaseModel):
+    id: int
+    part_number: str
+    editor: str
+    status: str
+    task_type: str
+    note: Optional[str]
+    source_url: Optional[str]
+    batch_id: Optional[str]
+    validated: bool
+    validator: Optional[str]
+    validation_date: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+    affected_tables: Optional[List[str]]
+    changes_count: Optional[int]
+
+class ValidationRequest(BaseModel):
+    validator: str = Field(..., description="Username of the validator")
+    validation_notes: Optional[str] = Field(None, description="Validation notes")
+
+# Dependency to get the service
+async def get_manual_imputation_service():
+    return ManualImputationService()
+
+@router.post("/imputation/", response_model=ManualImputationResponse)
+async def create_manual_imputation(
+    request: ManualImputationRequest,
+    service: ManualImputationService = Depends(get_manual_imputation_service)
+):
+    """
+    Create a new manual imputation task and apply data updates.
+    
+    This endpoint allows users to manually add or update product data including:
+    - Product attributes (specifications)
+    - Product extras (additional fields)
+    - Documents and media
+    - Seller information
+    
+    All changes are logged in the manual_tasks table with full traceability.
+    """
+    try:
+        # Prepare data updates dictionary
+        data_updates = {}
+        
+        if request.attributes:
+            data_updates['attributes'] = [attr.dict() for attr in request.attributes]
+        
+        if request.extras:
+            data_updates['extras'] = [extra.dict() for extra in request.extras]
+        
+        if request.documents:
+            data_updates['documents'] = [doc.dict() for doc in request.documents]
+        
+        if request.sellers:
+            data_updates['sellers'] = [seller.dict() for seller in request.sellers]
+        
+        if not data_updates:
+            raise HTTPException(
+                status_code=400,
+                detail="No data updates provided. Please include at least one of: attributes, extras, documents, or sellers."
+            )
+        
+        # Process the manual imputation
+        result = await service.create_manual_task(
+            part_number=request.part_number,
+            editor=request.editor,
+            data_updates=data_updates,
+            notes=request.notes,
+            source_url=request.source_url,
+            batch_id=request.batch_id
+        )
+        
+        return ManualImputationResponse(**result)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/history/", response_model=List[TaskHistoryResponse])
+async def get_manual_task_history(
+    part_number: Optional[str] = Query(None, description="Filter by part number"),
+    editor: Optional[str] = Query(None, description="Filter by editor"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    service: ManualImputationService = Depends(get_manual_imputation_service)
+):
+    """
+    Get manual task history with optional filtering.
+    
+    Returns a list of manual imputation tasks with their details,
+    including what changes were made and their current validation status.
+    """
+    try:
+        tasks = await service.get_manual_task_history(
+            part_number=part_number,
+            editor=editor,
+            limit=limit
+        )
+        
+        return [
+            TaskHistoryResponse(
+                id=task['id'],
+                part_number=task['part_number'],
+                editor=task['editor'],
+                status=task['status'],
+                task_type=task['task_type'],
+                note=task['note'],
+                source_url=task['source_url'],
+                batch_id=task['batch_id'],
+                validated=task['validated'],
+                validator=task['validator'],
+                validation_date=task['validation_date'],
+                created_at=task['created_at'],
+                updated_at=task['updated_at'],
+                affected_tables=task['affected_tables'],
+                changes_count=len(task.get('changes_summary', {}))
+            )
+            for task in tasks
+        ]
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/validate/{task_id}/")
+async def validate_manual_task(
+    task_id: int,
+    request: ValidationRequest,
+    service: ManualImputationService = Depends(get_manual_imputation_service)
+):
+    """
+    Validate a manual imputation task.
+    
+    This endpoint allows supervisors or quality control personnel
+    to validate manual changes made by editors.
+    """
+    try:
+        result = await service.validate_manual_task(
+            task_id=task_id,
+            validator=request.validator,
+            validation_notes=request.validation_notes
+        )
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/task/{task_id}/")
+async def get_manual_task_details(
+    task_id: int,
+    service: ManualImputationService = Depends(get_manual_imputation_service)
+):
+    """
+    Get detailed information about a specific manual task.
+    """
+    try:
+        tasks = await service.get_manual_task_history(limit=1)
+        task = next((t for t in tasks if t['id'] == task_id), None)
+        
+        if not task:
+            raise HTTPException(status_code=404, detail=f"Manual task {task_id} not found")
+        
+        return {
+            'id': task['id'],
+            'part_number': task['part_number'],
+            'editor': task['editor'],
+            'status': task['status'],
+            'task_type': task['task_type'],
+            'edited_fields': task['edited_fields'],
+            'affected_tables': task['affected_tables'],
+            'changes_summary': task['changes_summary'],
+            'note': task['note'],
+            'source_url': task['source_url'],
+            'batch_id': task['batch_id'],
+            'validated': task['validated'],
+            'validator': task['validator'],
+            'validation_date': task['validation_date'],
+            'validation_notes': task.get('validation_notes'),
+            'created_at': task['created_at'],
+            'updated_at': task['updated_at'],
+            'processing_start_time': task['processing_start_time'],
+            'processing_end_time': task['processing_end_time']
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.get("/stats/")
+async def get_manual_imputation_stats(
+    service: ManualImputationService = Depends(get_manual_imputation_service)
+):
+    """
+    Get statistics about manual imputation tasks.
+    """
+    try:
+        # Get recent tasks for statistics
+        tasks = await service.get_manual_task_history(limit=1000)
+        
+        total_tasks = len(tasks)
+        completed_tasks = len([t for t in tasks if t['status'] == 'completed'])
+        failed_tasks = len([t for t in tasks if t['status'] == 'failed'])
+        validated_tasks = len([t for t in tasks if t['validated']])
+        
+        # Get unique editors and part numbers
+        unique_editors = len(set(t['editor'] for t in tasks))
+        unique_part_numbers = len(set(t['part_number'] for t in tasks))
+        
+        # Calculate success rate
+        success_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        validation_rate = (validated_tasks / completed_tasks * 100) if completed_tasks > 0 else 0
+        
+        return {
+            'total_tasks': total_tasks,
+            'completed_tasks': completed_tasks,
+            'failed_tasks': failed_tasks,
+            'validated_tasks': validated_tasks,
+            'unique_editors': unique_editors,
+            'unique_part_numbers': unique_part_numbers,
+            'success_rate': round(success_rate, 2),
+            'validation_rate': round(validation_rate, 2)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# Legacy endpoint for backward compatibility
+@router.post("/manual-imputation/")
+async def create_manual_task_legacy(
+    request: dict,
+    service: ManualImputationService = Depends(get_manual_imputation_service)
+):
+    """
+    Legacy endpoint for backward compatibility.
+    Redirects to the new imputation endpoint.
+    """
+    try:
+        # Convert legacy format to new format
+        manual_request = ManualImputationRequest(
+            part_number=request.get('part_number', ''),
+            editor=request.get('editor', ''),
+            notes=request.get('note'),
+            source_url=request.get('source_url'),
+            attributes=[],  # Legacy format doesn't support structured data
+            extras=[],
+            documents=[],
+            sellers=[]
+        )
+        
+        # Add edited_fields as extras if present
+        if 'edited_fields' in request and request['edited_fields']:
+            manual_request.extras = [
+                ExtraData(name=k, value=str(v))
+                for k, v in request['edited_fields'].items()
+            ]
+        
+        return await create_manual_imputation(manual_request, service)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

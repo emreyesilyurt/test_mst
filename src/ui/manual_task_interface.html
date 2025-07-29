@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Task Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.secondary {
+            background-color: #95a5a6;
+        }
+        button.secondary:hover {
+            background-color: #7f8c8d;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .dynamic-fields {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .field-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: end;
+        }
+        .field-row input {
+            flex: 1;
+        }
+        .field-row button {
+            flex: 0 0 auto;
+            background-color: #e74c3c;
+            padding: 8px 12px;
+        }
+        .field-row button:hover {
+            background-color: #c0392b;
+        }
+        .add-field {
+            background-color: #27ae60;
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+        .add-field:hover {
+            background-color: #229954;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .search-result-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        .product-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .detail-section {
+            margin-bottom: 15px;
+        }
+        .detail-section h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .detail-item {
+            background: white;
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 3px;
+            border-left: 3px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Manual Task Interface</h1>
+        <p>Manage manual data imputation tasks for electronic components</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('simple')">Simple Task</button>
+        <button class="tab" onclick="showTab('process')">Process Task</button>
+        <button class="tab" onclick="showTab('create')">Full Create</button>
+        <button class="tab" onclick="showTab('search')">Search Parts</button>
+        <button class="tab" onclick="showTab('tasks')">View Tasks</button>
+        <button class="tab" onclick="showTab('product')">Product Details</button>
+    </div>
+
+    <!-- Simple Task Tab -->
+    <div id="simple" class="tab-content active">
+        <div class="container">
+            <div class="section">
+                <h3>Create Simple Task</h3>
+                <p style="color: #666; margin-bottom: 20px;">Step 1: Create a basic task with minimal information. You can add detailed data in the next step.</p>
+                
+                <div class="form-group">
+                    <label for="simpleProductId">Product ID</label>
+                    <select id="simpleProductId">
+                        <option value="">Select a product (optional)</option>
+                    </select>
+                    <button type="button" onclick="loadProducts()" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;">Load Products</button>
+                </div>
+                
+                <div style="text-align: center; margin: 15px 0; color: #666;">OR</div>
+                
+                <div class="form-group">
+                    <label for="simplePartNumber">Part Number</label>
+                    <input type="text" id="simplePartNumber" placeholder="Enter part number (e.g., STM32F407VGT6)">
+                </div>
+                
+                <div class="form-group">
+                    <label for="simpleEditor">Editor *</label>
+                    <input type="text" id="simpleEditor" placeholder="Your username" value="demo_user">
+                </div>
+                
+                <div class="form-group">
+                    <label for="simpleNotes">Notes</label>
+                    <textarea id="simpleNotes" placeholder="Optional notes about this task"></textarea>
+                </div>
+                
+                <button onclick="createSimpleTask()">Create Simple Task</button>
+                <button class="secondary" onclick="clearSimpleForm()">Clear Form</button>
+                
+                <div id="simpleResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Process Task Tab -->
+    <div id="process" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>Process Task with Detailed Data</h3>
+                <p style="color: #666; margin-bottom: 20px;">Step 2: Add detailed data to an existing task. Each item can have individual notes and source URLs.</p>
+                
+                <div class="form-group">
+                    <label for="processTaskId">Task ID *</label>
+                    <input type="number" id="processTaskId" placeholder="Enter task ID from simple task creation" onchange="loadTaskData()">
+                    <button type="button" onclick="loadTaskData()" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;">Load Task Data</button>
+                </div>
+            </div>
+
+            <!-- Category Section -->
+            <div class="section">
+                <h3>Product Category</h3>
+                <div id="categoryLevels">
+                    <div class="form-group">
+                        <label for="categoryLevel1">Level 1 Category</label>
+                        <select id="categoryLevel1" onchange="loadNextCategoryLevel(1)">
+                            <option value="">Select root category</option>
+                        </select>
+                        <button type="button" onclick="loadRootCategories()" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;">Load Root Categories</button>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Manual Category Entry</label>
+                    <div style="display: flex; gap: 10px; align-items: end;">
+                        <input type="text" id="manualCategoryName" placeholder="Enter new category name">
+                        <select id="manualCategoryParent">
+                            <option value="">Select parent (optional)</option>
+                        </select>
+                        <label style="display: flex; align-items: center; margin: 0;">
+                            <input type="checkbox" id="manualCategoryIsProduct" style="width: auto; margin-right: 5px;">
+                            Product Category
+                        </label>
+                        <button type="button" onclick="createManualCategory()" style="padding: 8px 15px; font-size: 12px; background-color: #28a745;">Create Category</button>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="processCategoryId">
+            </div>
+
+            <!-- Attributes Section with Metadata -->
+            <div class="section">
+                <h3>Product Attributes</h3>
+                <div class="dynamic-fields" id="processAttributesContainer">
+                    <div class="field-row">
+                        <select class="process-attr-name">
+                            <option value="">Select attribute</option>
+                        </select>
+                        <input type="text" placeholder="Value" class="process-attr-value">
+                        <input type="text" placeholder="Unit (optional)" class="process-attr-unit">
+                        <input type="text" placeholder="Notes (optional)" class="process-attr-notes">
+                        <input type="url" placeholder="Source URL (optional)" class="process-attr-source">
+                        <button type="button" onclick="removeField(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-field" onclick="addProcessAttributeField()">+ Add Attribute</button>
+                <button type="button" onclick="loadAttributes()" style="margin-left: 10px; padding: 8px 15px; font-size: 12px; background-color: #17a2b8;">Load Attributes</button>
+            </div>
+
+            <!-- Extras Section with Metadata -->
+            <div class="section">
+                <h3>Product Extras</h3>
+                <div class="dynamic-fields" id="processExtrasContainer">
+                    <div class="field-row">
+                        <input type="text" placeholder="Extra Name" class="process-extra-name">
+                        <input type="text" placeholder="Value" class="process-extra-value">
+                        <input type="text" placeholder="Notes (optional)" class="process-extra-notes">
+                        <input type="url" placeholder="Source URL (optional)" class="process-extra-source">
+                        <button type="button" onclick="removeField(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-field" onclick="addProcessExtraField()">+ Add Extra</button>
+            </div>
+
+            <!-- Documents Section with Metadata -->
+            <div class="section">
+                <h3>Documents & Media</h3>
+                <div class="dynamic-fields" id="processDocumentsContainer">
+                    <div class="field-row">
+                        <input type="url" placeholder="Document URL" class="process-doc-url">
+                        <input type="text" placeholder="Type" class="process-doc-type">
+                        <input type="text" placeholder="Description (optional)" class="process-doc-desc">
+                        <input type="text" placeholder="Notes (optional)" class="process-doc-notes">
+                        <input type="url" placeholder="Source URL (optional)" class="process-doc-source">
+                        <button type="button" onclick="removeField(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-field" onclick="addProcessDocumentField()">+ Add Document</button>
+            </div>
+
+            <!-- Sellers Section with Metadata -->
+            <div class="section">
+                <h3>Sellers</h3>
+                <div class="dynamic-fields" id="processSellersContainer">
+                    <div class="field-row">
+                        <input type="text" placeholder="Seller Name" class="process-seller-name">
+                        <select class="process-seller-type">
+                            <option value="distributor">Distributor</option>
+                            <option value="manufacturer">Manufacturer</option>
+                            <option value="broker">Broker</option>
+                        </select>
+                        <input type="text" placeholder="Notes (optional)" class="process-seller-notes">
+                        <input type="url" placeholder="Source URL (optional)" class="process-seller-source">
+                        <button type="button" onclick="removeField(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-field" onclick="addProcessSellerField()">+ Add Seller</button>
+            </div>
+
+            <button onclick="processTaskData()">Process Task Data</button>
+            <button class="secondary" onclick="clearProcessForm()">Clear Form</button>
+            
+            <div id="processResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Create Task Tab -->
+    <div id="create" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>Create Manual Imputation Task</h3>
+                
+                <div class="form-group">
+                    <label for="partNumber">Part Number *</label>
+                    <input type="text" id="partNumber" placeholder="Enter part number (e.g., STM32F407VGT6)">
+                </div>
+                
+                <div class="form-group">
+                    <label for="editor">Editor *</label>
+                    <input type="text" id="editor" placeholder="Your username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" placeholder="Optional notes about the changes"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="sourceUrl">Source URL</label>
+                    <input type="url" id="sourceUrl" placeholder="https://example.com/datasheet">
+                </div>
+                
+                <div class="form-group">
+                    <label for="batchId">Batch ID</label>
+                    <input type="text" id="batchId" placeholder="Optional batch identifier">
+                </div>
+            </div>
+
+            <!-- Attributes Section -->
+            <div class="section">
+                <h3>Product Attributes</h3>
+                <div class="dynamic-fields" id="attributesContainer">
+                    <div class="field-row">
+                        <input type="text" placeholder="Attribute Name (e.g., Voltage)" class="attr-name">
+                        <input type="text" placeholder="Value (e.g., 3.3V)" class="attr-value">
+                        <input type="text" placeholder="Unit (optional)" class="attr-unit">
+                        <button type="button" onclick="removeField(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-field" onclick="addAttributeField()">+ Add Attribute</button>
+            </div>
+
+            <!-- Extras Section -->
+            <div class="section">
+                <h3>Product Extras</h3>
+                <div class="dynamic-fields" id="extrasContainer">
+                    <div class="field-row">
+                        <input type="text" placeholder="Extra Name (e.g., Package Type)" class="extra-name">
+                        <input type="text" placeholder="Value (e.g., LQFP-100)" class="extra-value">
+                        <button type="button" onclick="removeField(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-field" onclick="addExtraField()">+ Add Extra</button>
+            </div>
+
+            <!-- Documents Section -->
+            <div class="section">
+                <h3>Documents & Media</h3>
+                <div class="dynamic-fields" id="documentsContainer">
+                    <div class="field-row">
+                        <input type="url" placeholder="Document URL" class="doc-url">
+                        <input type="text" placeholder="Type (e.g., datasheet)" class="doc-type">
+                        <input type="text" placeholder="Description (optional)" class="doc-desc">
+                        <button type="button" onclick="removeField(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-field" onclick="addDocumentField()">+ Add Document</button>
+            </div>
+
+            <!-- Sellers Section -->
+            <div class="section">
+                <h3>Sellers</h3>
+                <div class="dynamic-fields" id="sellersContainer">
+                    <div class="field-row">
+                        <input type="text" placeholder="Seller Name (e.g., Digi-Key)" class="seller-name">
+                        <select class="seller-type">
+                            <option value="distributor">Distributor</option>
+                            <option value="manufacturer">Manufacturer</option>
+                            <option value="broker">Broker</option>
+                        </select>
+                        <button type="button" onclick="removeField(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-field" onclick="addSellerField()">+ Add Seller</button>
+            </div>
+
+            <button onclick="createTask()">Create Task</button>
+            <button class="secondary" onclick="clearForm()">Clear Form</button>
+            
+            <div id="createResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Search Parts Tab -->
+    <div id="search" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>Search Part Numbers</h3>
+                
+                <div class="form-group">
+                    <label for="searchQuery">Search Query</label>
+                    <input type="text" id="searchQuery" placeholder="Enter part number or partial match">
+                </div>
+                
+                <div class="form-group">
+                    <label for="searchLimit">Limit Results</label>
+                    <select id="searchLimit">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                
+                <button onclick="searchPartNumbers()">Search</button>
+                
+                <div id="searchResults" class="search-results" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Tasks Tab -->
+    <div id="tasks" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>View Manual Tasks</h3>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="filterEditor">Filter by Editor</label>
+                        <input type="text" id="filterEditor" placeholder="Username">
+                    </div>
+                    
+                    <div class="form-group" style="flex: 1;">
+                        <label for="filterStatus">Filter by Status</label>
+                        <select id="filterStatus">
+                            <option value="">All Statuses</option>
+                            <option value="completed">Completed</option>
+                            <option value="failed">Failed</option>
+                            <option value="processing">Processing</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="flex: 1;">
+                        <label for="filterDays">Last N Days</label>
+                        <select id="filterDays">
+                            <option value="">All Time</option>
+                            <option value="1">Last 24 hours</option>
+                            <option value="7">Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button onclick="loadTasks()">Load Tasks</button>
+                <button class="secondary" onclick="clearTaskFilters()">Clear Filters</button>
+                
+                <div id="tasksResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Details Tab -->
+    <div id="product" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>Get Product Details</h3>
+                
+                <div class="form-group">
+                    <label for="productId">Product ID</label>
+                    <input type="number" id="productId" placeholder="Enter product ID">
+                </div>
+                
+                <div class="form-group">
+                    <label for="productPartNumber">Or Part Number</label>
+                    <input type="text" id="productPartNumber" placeholder="Enter part number">
+                </div>
+                
+                <button onclick="getProductDetails()">Get Details by ID</button>
+                <button onclick="getProductByPartNumber()">Get Details by Part Number</button>
+                
+                <div id="productResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/manual';
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        function addAttributeField() {
+            const container = document.getElementById('attributesContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <input type="text" placeholder="Attribute Name" class="attr-name">
+                <input type="text" placeholder="Value" class="attr-value">
+                <input type="text" placeholder="Unit (optional)" class="attr-unit">
+                <button type="button" onclick="removeField(this)">Remove</button>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function addExtraField() {
+            const container = document.getElementById('extrasContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <input type="text" placeholder="Extra Name" class="extra-name">
+                <input type="text" placeholder="Value" class="extra-value">
+                <button type="button" onclick="removeField(this)">Remove</button>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function addDocumentField() {
+            const container = document.getElementById('documentsContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <input type="url" placeholder="Document URL" class="doc-url">
+                <input type="text" placeholder="Type" class="doc-type">
+                <input type="text" placeholder="Description (optional)" class="doc-desc">
+                <button type="button" onclick="removeField(this)">Remove</button>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function addSellerField() {
+            const container = document.getElementById('sellersContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <input type="text" placeholder="Seller Name" class="seller-name">
+                <select class="seller-type">
+                    <option value="distributor">Distributor</option>
+                    <option value="manufacturer">Manufacturer</option>
+                    <option value="broker">Broker</option>
+                </select>
+                <button type="button" onclick="removeField(this)">Remove</button>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function removeField(button) {
+            button.parentElement.remove();
+        }
+
+        function clearForm() {
+            document.getElementById('partNumber').value = '';
+            document.getElementById('editor').value = '';
+            document.getElementById('notes').value = '';
+            document.getElementById('sourceUrl').value = '';
+            document.getElementById('batchId').value = '';
+            
+            // Clear dynamic fields
+            ['attributesContainer', 'extrasContainer', 'documentsContainer', 'sellersContainer'].forEach(containerId => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = container.children[0].outerHTML; // Keep first field
+            });
+            
+            document.getElementById('createResult').style.display = 'none';
+        }
+
+        function collectFieldData(container, fieldMapping) {
+            const rows = container.querySelectorAll('.field-row');
+            const data = [];
+            
+            rows.forEach(row => {
+                const item = {};
+                let hasData = false;
+                
+                Object.keys(fieldMapping).forEach(key => {
+                    const input = row.querySelector(fieldMapping[key]);
+                    if (input && input.value.trim()) {
+                        item[key] = input.value.trim();
+                        hasData = true;
+                    }
+                });
+                
+                if (hasData) {
+                    data.push(item);
+                }
+            });
+            
+            return data;
+        }
+
+        async function createTask() {
+            const partNumber = document.getElementById('partNumber').value.trim();
+            const editor = document.getElementById('editor').value.trim();
+            
+            if (!partNumber || !editor) {
+                showResult('createResult', 'error', 'Part Number and Editor are required fields.');
+                return;
+            }
+            
+            // Collect attributes
+            const attributes = collectFieldData(
+                document.getElementById('attributesContainer'),
+                { name: '.attr-name', value: '.attr-value', unit: '.attr-unit' }
+            );
+            
+            // Collect extras
+            const extras = collectFieldData(
+                document.getElementById('extrasContainer'),
+                { name: '.extra-name', value: '.extra-value' }
+            );
+            
+            // Collect documents
+            const documents = collectFieldData(
+                document.getElementById('documentsContainer'),
+                { url: '.doc-url', type: '.doc-type', description: '.doc-desc' }
+            );
+            
+            // Collect sellers
+            const sellers = collectFieldData(
+                document.getElementById('sellersContainer'),
+                { name: '.seller-name', type: '.seller-type' }
+            );
+            
+            const requestData = {
+                part_number: partNumber,
+                editor: editor,
+                notes: document.getElementById('notes').value.trim() || null,
+                source_url: document.getElementById('sourceUrl').value.trim() || null,
+                batch_id: document.getElementById('batchId').value.trim() || null,
+                attributes: attributes.length > 0 ? attributes : null,
+                extras: extras.length > 0 ? extras : null,
+                documents: documents.length > 0 ? documents : null,
+                sellers: sellers.length > 0 ? sellers : null
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/imputation/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('createResult', 'success', JSON.stringify(result, null, 2));
+                } else {
+                    showResult('createResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('createResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        async function searchPartNumbers() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const limit = document.getElementById('searchLimit').value;
+            
+            if (!query) {
+                showResult('searchResults', 'error', 'Search query is required.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/partnumbers/search/?query=${encodeURIComponent(query)}&limit=${limit}`);
+                const results = await response.json();
+                
+                if (response.ok) {
+                    displaySearchResults(results);
+                } else {
+                    showResult('searchResults', 'error', JSON.stringify(results, null, 2));
+                }
+            } catch (error) {
+                showResult('searchResults', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function displaySearchResults(results) {
+            const container = document.getElementById('searchResults');
+            container.style.display = 'block';
+            
+            if (results.length === 0) {
+                container.innerHTML = '<div class="search-result-item">No results found.</div>';
+                return;
+            }
+            
+            container.innerHTML = results.map(item => `
+                <div class="search-result-item" onclick="selectPartNumber('${item.part_number}')">
+                    <strong>${item.part_number}</strong>
+                    ${item.manufacturer ? ` - ${item.manufacturer}` : ''}
+                    ${item.category ? ` (${item.category})` : ''}
+                    <br>
+                    <small>Product ID: ${item.product_id || 'N/A'} | Last Updated: ${item.updated_date || 'N/A'}</small>
+                </div>
+            `).join('');
+        }
+
+        function selectPartNumber(partNumber) {
+            document.getElementById('partNumber').value = partNumber;
+            showTab('create');
+        }
+
+        async function loadTasks() {
+            const editor = document.getElementById('filterEditor').value.trim();
+            const status = document.getElementById('filterStatus').value;
+            const days = document.getElementById('filterDays').value;
+            
+            let url = `${API_BASE}/tasks/?limit=50`;
+            if (editor) url += `&editor=${encodeURIComponent(editor)}`;
+            if (status) url += `&status=${encodeURIComponent(status)}`;
+            if (days) url += `&last_updated_days=${days}`;
+            
+            try {
+                const response = await fetch(url);
+                const results = await response.json();
+                
+                if (response.ok) {
+                    showResult('tasksResult', 'info', JSON.stringify(results, null, 2));
+                } else {
+                    showResult('tasksResult', 'error', JSON.stringify(results, null, 2));
+                }
+            } catch (error) {
+                showResult('tasksResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function clearTaskFilters() {
+            document.getElementById('filterEditor').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterDays').value = '';
+            document.getElementById('tasksResult').style.display = 'none';
+        }
+
+        async function getProductDetails() {
+            const productId = document.getElementById('productId').value.trim();
+            
+            if (!productId) {
+                showResult('productResult', 'error', 'Product ID is required.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/product/${productId}/details/`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayProductDetails(result);
+                } else {
+                    showResult('productResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('productResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        async function getProductByPartNumber() {
+            const partNumber = document.getElementById('productPartNumber').value.trim();
+            
+            if (!partNumber) {
+                showResult('productResult', 'error', 'Part Number is required.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/partnumber/${encodeURIComponent(partNumber)}/product/`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayProductDetails(result);
+                } else {
+                    showResult('productResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('productResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function displayProductDetails(product) {
+            const container = document.getElementById('productResult');
+            container.className = 'result info';
+            container.style.display = 'block';
+            
+            let html = `
+                <div class="product-details">
+                    <h4>Product Information</h4>
+                    <div class="detail-item">
+                        <strong>Product ID:</strong> ${product.product_id}<br>
+                        <strong>Part Number:</strong> ${product.part_number || 'N/A'}<br>
+                        <strong>Manufacturer:</strong> ${product.manufacturer?.name || 'N/A'}<br>
+                        <strong>Category:</strong> ${product.category?.fullname || product.category?.name || 'N/A'}
+                    </div>
+            `;
+            
+            if (product.attributes && product.attributes.length > 0) {
+                html += `
+                    <div class="detail-section">
+                        <h4>Attributes (${product.attributes.length})</h4>
+                        ${product.attributes.map(attr => `
+                            <div class="detail-item">
+                                <strong>${attr.attribute_name}:</strong> ${attr.value_text}${attr.value_unit ? ` ${attr.value_unit}` : ''}
+                                <small> (Source: ${attr.source})</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            if (product.extras && product.extras.length > 0) {
+                html += `
+                    <div class="detail-section">
+                        <h4>Extras (${product.extras.length})</h4>
+                        ${product.extras.map(extra => `
+                            <div class="detail-item">
+                                <strong>${extra.name}:</strong> ${extra.value}
+                                <small> (Source: ${extra.source})</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            if (product.documents && product.documents.length > 0) {
+                html += `
+                    <div class="detail-section">
+                        <h4>Documents (${product.documents.length})</h4>
+                        ${product.documents.map(doc => `
+                            <div class="detail-item">
+                                <strong>${doc.type}:</strong> <a href="${doc.url}" target="_blank">${doc.url}</a>
+                                ${doc.description ? `<br><em>${doc.description}</em>` : ''}
+                                <small> (Source: ${doc.source})</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            if (product.sellers && product.sellers.length > 0) {
+                html += `
+                    <div class="detail-section">
+                        <h4>Sellers (${product.sellers.length})</h4>
+                        ${product.sellers.map(seller => `
+                            <div class="detail-item">
+                                <strong>${seller.seller_name}</strong> (${seller.seller_type})
+                                <small> (Source: ${seller.source})</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function showResult(elementId, type, message) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        // New functions for Simple Task workflow
+        async function createSimpleTask() {
+            const productId = document.getElementById('simpleProductId').value.trim();
+            const partNumber = document.getElementById('simplePartNumber').value.trim();
+            const editor = document.getElementById('simpleEditor').value.trim();
+            const notes = document.getElementById('simpleNotes').value.trim();
+            
+            if (!editor) {
+                showResult('simpleResult', 'error', 'Editor is required.');
+                return;
+            }
+            
+            if (!productId && !partNumber) {
+                showResult('simpleResult', 'error', 'Either Product ID or Part Number is required.');
+                return;
+            }
+            
+            if (productId && partNumber) {
+                showResult('simpleResult', 'error', 'Provide either Product ID OR Part Number, not both.');
+                return;
+            }
+            
+            const requestData = {
+                editor: editor,
+                notes: notes || null
+            };
+            
+            if (productId) {
+                requestData.product_id = parseInt(productId);
+            } else {
+                requestData.part_number = partNumber;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/task/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('simpleResult', 'success', JSON.stringify(result, null, 2));
+                    // Auto-fill task ID in process tab
+                    if (result.task_id) {
+                        document.getElementById('processTaskId').value = result.task_id;
+                    }
+                } else {
+                    showResult('simpleResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('simpleResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function clearSimpleForm() {
+            document.getElementById('simpleProductId').value = '';
+            document.getElementById('simplePartNumber').value = '';
+            document.getElementById('simpleEditor').value = 'demo_user';
+            document.getElementById('simpleNotes').value = '';
+            document.getElementById('simpleResult').style.display = 'none';
+        }
+
+        // Functions for Process Task workflow
+        function addProcessAttributeField() {
+            const container = document.getElementById('processAttributesContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <select class="process-attr-name">
+                    <option value="">Select attribute</option>
+                </select>
+                <input type="text" placeholder="Value" class="process-attr-value">
+                <input type="text" placeholder="Unit (optional)" class="process-attr-unit">
+                <input type="text" placeholder="Notes (optional)" class="process-attr-notes">
+                <input type="url" placeholder="Source URL (optional)" class="process-attr-source">
+                <button type="button" onclick="removeField(this)">Remove</button>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function addProcessExtraField() {
+            const container = document.getElementById('processExtrasContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <input type="text" placeholder="Extra Name" class="process-extra-name">
+                <input type="text" placeholder="Value" class="process-extra-value">
+                <input type="text" placeholder="Notes (optional)" class="process-extra-notes">
+                <input type="url" placeholder="Source URL (optional)" class="process-extra-source">
+                <button type="button" onclick="removeField(this)">Remove</button>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function addProcessDocumentField() {
+            const container = document.getElementById('processDocumentsContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <input type="url" placeholder="Document URL" class="process-doc-url">
+                <input type="text" placeholder="Type" class="process-doc-type">
+                <input type="text" placeholder="Description (optional)" class="process-doc-desc">
+                <input type="text" placeholder="Notes (optional)" class="process-doc-notes">
+                <input type="url" placeholder="Source URL (optional)" class="process-doc-source">
+                <button type="button" onclick="removeField(this)">Remove</button>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function addProcessSellerField() {
+            const container = document.getElementById('processSellersContainer');
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'field-row';
+            fieldRow.innerHTML = `
+                <input type="text" placeholder="Seller Name" class="process-seller-name">
+                <select class="process-seller-type">
+                    <option value="distributor">Distributor</option>
+                    <option value="manufacturer">Manufacturer</option>
+                    <option value="broker">Broker</option>
+                </select>
+                <input type="text" placeholder="Notes (optional)" class="process-seller-notes">
+                <input type="url" placeholder="Source URL (optional)" class="process-seller-source">
+                <button type="button" onclick="removeField(this)">Remove</button>
+            `;
+            container.appendChild(fieldRow);
+        }
+
+        function collectProcessFieldData(container, fieldMapping) {
+            const rows = container.querySelectorAll('.field-row');
+            const data = [];
+            
+            rows.forEach(row => {
+                const item = {};
+                let hasData = false;
+                
+                Object.keys(fieldMapping).forEach(key => {
+                    const input = row.querySelector(fieldMapping[key]);
+                    if (input && input.value.trim()) {
+                        item[key] = input.value.trim();
+                        hasData = true;
+                    }
+                });
+                
+                if (hasData) {
+                    data.push(item);
+                }
+            });
+            
+            return data;
+        }
+
+        async function processTaskData() {
+            const taskId = document.getElementById('processTaskId').value.trim();
+            const categoryId = document.getElementById('processCategoryId').value.trim();
+            
+            if (!taskId) {
+                showResult('processResult', 'error', 'Task ID is required.');
+                return;
+            }
+            
+            // Collect attributes with metadata
+            const attributes = collectProcessFieldData(
+                document.getElementById('processAttributesContainer'),
+                { 
+                    name: '.process-attr-name', 
+                    value: '.process-attr-value', 
+                    unit: '.process-attr-unit',
+                    notes: '.process-attr-notes',
+                    source_url: '.process-attr-source'
+                }
+            );
+            
+            // Collect extras with metadata
+            const extras = collectProcessFieldData(
+                document.getElementById('processExtrasContainer'),
+                { 
+                    name: '.process-extra-name', 
+                    value: '.process-extra-value',
+                    notes: '.process-extra-notes',
+                    source_url: '.process-extra-source'
+                }
+            );
+            
+            // Collect documents with metadata
+            const documents = collectProcessFieldData(
+                document.getElementById('processDocumentsContainer'),
+                { 
+                    url: '.process-doc-url', 
+                    type: '.process-doc-type', 
+                    description: '.process-doc-desc',
+                    notes: '.process-doc-notes',
+                    source_url: '.process-doc-source'
+                }
+            );
+            
+            // Collect sellers with metadata
+            const sellers = collectProcessFieldData(
+                document.getElementById('processSellersContainer'),
+                { 
+                    name: '.process-seller-name', 
+                    type: '.process-seller-type',
+                    notes: '.process-seller-notes',
+                    source_url: '.process-seller-source'
+                }
+            );
+            
+            const requestData = {
+                task_id: parseInt(taskId),
+                category_id: categoryId || null,
+                attributes: attributes.length > 0 ? attributes : null,
+                extras: extras.length > 0 ? extras : null,
+                documents: documents.length > 0 ? documents : null,
+                sellers: sellers.length > 0 ? sellers : null
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/task/process/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('processResult', 'success', JSON.stringify(result, null, 2));
+                } else {
+                    showResult('processResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('processResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function clearProcessForm() {
+            document.getElementById('processTaskId').value = '';
+            
+            // Clear dynamic fields
+            ['processAttributesContainer', 'processExtrasContainer', 'processDocumentsContainer', 'processSellersContainer'].forEach(containerId => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = container.children[0].outerHTML; // Keep first field
+            });
+            
+            document.getElementById('processResult').style.display = 'none';
+        }
+
+        // Load products for dropdown
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${API_BASE}/products/?limit=100`);
+                const products = await response.json();
+                
+                if (response.ok) {
+                    const select = document.getElementById('simpleProductId');
+                    
+                    // Clear existing options except the first one
+                    select.innerHTML = '<option value="">Select a product (optional)</option>';
+                    
+                    // Add products to dropdown
+                    products.forEach(product => {
+                        const option = document.createElement('option');
+                        option.value = product.product_id;
+                        option.textContent = product.display_text; // "product_id - part_number"
+                        select.appendChild(option);
+                    });
+                    
+                    showResult('simpleResult', 'success', `Loaded ${products.length} products into dropdown`);
+                } else {
+                    showResult('simpleResult', 'error', `Failed to load products: ${JSON.stringify(products)}`);
+                }
+            } catch (error) {
+                showResult('simpleResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        // Load categories for dropdown
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/categories/`);
+                const categories = await response.json();
+                
+                if (response.ok) {
+                    const select = document.getElementById('processCategoryId');
+                    
+                    // Clear existing options except the first one
+                    select.innerHTML = '<option value="">Select a category (optional)</option>';
+                    
+                    // Add categories to dropdown
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = category.fullname || category.name;
+                        select.appendChild(option);
+                    });
+                    
+                    showResult('processResult', 'success', `Loaded ${categories.length} categories into dropdown`);
+                } else {
+                    showResult('processResult', 'error', `Failed to load categories: ${JSON.stringify(categories)}`);
+                }
+            } catch (error) {
+                showResult('processResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        // Load attributes for dropdown
+        async function loadAttributes() {
+            try {
+                const categoryId = document.getElementById('processCategoryId').value;
+                let url = `${API_BASE}/attributes/`;
+                if (categoryId) {
+                    url += `?category_id=${categoryId}`;
+                }
+                
+                const response = await fetch(url);
+                const attributes = await response.json();
+                
+                if (response.ok) {
+                    // Update all attribute dropdowns
+                    const attributeSelects = document.querySelectorAll('.process-attr-name');
+                    
+                    attributeSelects.forEach(select => {
+                        const currentValue = select.value;
+                        
+                        // Clear existing options except the first one
+                        select.innerHTML = '<option value="">Select attribute</option>';
+                        
+                        // Add attributes to dropdown
+                        attributes.forEach(attribute => {
+                            const option = document.createElement('option');
+                            option.value = attribute.name;
+                            option.textContent = attribute.name;
+                            if (attribute.desc) {
+                                option.title = attribute.desc; // Show description as tooltip
+                            }
+                            select.appendChild(option);
+                        });
+                        
+                        // Restore previous selection if it still exists
+                        if (currentValue) {
+                            select.value = currentValue;
+                        }
+                    });
+                    
+                    const categoryText = categoryId ? ` for selected category` : ` (all attributes)`;
+                    showResult('processResult', 'success', `Loaded ${attributes.length} attributes${categoryText} into dropdowns`);
+                } else {
+                    showResult('processResult', 'error', `Failed to load attributes: ${JSON.stringify(attributes)}`);
+                }
+            } catch (error) {
+                showResult('processResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        // Load task data when task ID is entered
+        async function loadTaskData() {
+            const taskId = document.getElementById('processTaskId').value.trim();
+            
+            if (!taskId) {
+                showResult('processResult', 'error', 'Task ID is required.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/task/${taskId}/`);
+                const task = await response.json();
+                
+                if (response.ok) {
+                    // If task has product_id, load product details
+                    if (task.product_id) {
+                        const productResponse = await fetch(`${API_BASE}/product/${task.product_id}/details/`);
+                        const product = await productResponse.json();
+                        
+                        if (productResponse.ok) {
+                            // Pre-populate category if product has one
+                            if (product.category && product.category.id) {
+                                // Load categories first
+                                await loadCategories();
+                                // Set the category
+                                document.getElementById('processCategoryId').value = product.category.id;
+                                // Load attributes for this category
+                                await loadAttributes();
+                            }
+                            
+                            showResult('processResult', 'success', 
+                                `Task loaded successfully!\n` +
+                                `Product ID: ${product.product_id}\n` +
+                                `Part Number: ${product.part_number || 'N/A'}\n` +
+                                `Category: ${product.category?.fullname || product.category?.name || 'N/A'}\n` +
+                                `Manufacturer: ${product.manufacturer?.name || 'N/A'}\n` +
+                                `Existing Attributes: ${product.attributes?.length || 0}\n` +
+                                `Existing Extras: ${product.extras?.length || 0}`
+                            );
+                        } else {
+                            showResult('processResult', 'info', 
+                                `Task loaded but could not load product details.\n` +
+                                `Task ID: ${task.id}\n` +
+                                `Product ID: ${task.product_id}\n` +
+                                `Editor: ${task.editor}\n` +
+                                `Status: ${task.current_status}`
+                            );
+                        }
+                    } else {
+                        showResult('processResult', 'info', 
+                            `Task loaded successfully!\n` +
+                            `Task ID: ${task.id}\n` +
+                            `Editor: ${task.editor}\n` +
+                            `Status: ${task.current_status}\n` +
+                            `Note: No product ID associated with this task`
+                        );
+                    }
+                } else {
+                    showResult('processResult', 'error', `Failed to load task: ${JSON.stringify(task)}`);
+                }
+            } catch (error) {
+                showResult('processResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        // Multi-level category navigation functions
+        async function loadRootCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/categories/`);
+                const categories = await response.json();
+                
+                if (response.ok) {
+                    const select = document.getElementById('categoryLevel1');
+                    
+                    // Clear existing options except the first one
+                    select.innerHTML = '<option value="">Select root category</option>';
+                    
+                    // Add categories to dropdown
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        option.dataset.depth = category.depth || 0;
+                        select.appendChild(option);
+                    });
+                    
+                    // Update manual category parent dropdown
+                    updateManualCategoryParents(categories);
+                    
+                    showResult('processResult', 'success', `Loaded ${categories.length} root categories`);
+                } else {
+                    showResult('processResult', 'error', `Failed to load categories: ${JSON.stringify(categories)}`);
+                }
+            } catch (error) {
+                showResult('processResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        async function loadNextCategoryLevel(currentLevel) {
+            const currentSelect = document.getElementById(`categoryLevel${currentLevel}`);
+            const selectedCategoryId = currentSelect.value;
+            
+            // Remove all subsequent level dropdowns
+            const categoryLevelsContainer = document.getElementById('categoryLevels');
+            const existingLevels = categoryLevelsContainer.querySelectorAll('.form-group');
+            for (let i = currentLevel; i < existingLevels.length; i++) {
+                if (existingLevels[i] && existingLevels[i].querySelector(`#categoryLevel${i + 1}`)) {
+                    existingLevels[i].remove();
+                }
+            }
+            
+            // Clear the hidden category ID
+            document.getElementById('processCategoryId').value = '';
+            
+            if (!selectedCategoryId) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/categories/?parent_id=${selectedCategoryId}`);
+                const childCategories = await response.json();
+                
+                if (response.ok && childCategories.length > 0) {
+                    // Create next level dropdown
+                    const nextLevel = currentLevel + 1;
+                    const formGroup = document.createElement('div');
+                    formGroup.className = 'form-group';
+                    formGroup.innerHTML = `
+                        <label for="categoryLevel${nextLevel}">Level ${nextLevel} Category</label>
+                        <select id="categoryLevel${nextLevel}" onchange="loadNextCategoryLevel(${nextLevel})">
+                            <option value="">Select subcategory</option>
+                        </select>
+                    `;
+                    
+                    categoryLevelsContainer.appendChild(formGroup);
+                    
+                    const nextSelect = document.getElementById(`categoryLevel${nextLevel}`);
+                    
+                    // Add child categories to dropdown
+                    childCategories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        option.dataset.productCategory = category.product_category;
+                        nextSelect.appendChild(option);
+                    });
+                    
+                    showResult('processResult', 'success', `Loaded ${childCategories.length} subcategories for level ${nextLevel}`);
+                } else {
+                    // No more child categories - this is a leaf category
+                    // Check if it's a product category
+                    const selectedOption = currentSelect.options[currentSelect.selectedIndex];
+                    const isProductCategory = selectedOption.dataset.productCategory === 'true';
+                    
+                    if (isProductCategory) {
+                        document.getElementById('processCategoryId').value = selectedCategoryId;
+                        showResult('processResult', 'success', `Selected final category: ${selectedOption.textContent}\nCategory ID: ${selectedCategoryId}\nThis category can contain products.`);
+                        
+                        // Auto-load attributes for this category
+                        await loadAttributes();
+                    } else {
+                        showResult('processResult', 'info', `Selected category: ${selectedOption.textContent}\nThis is not a product category. Please select a subcategory or create a new product category.`);
+                    }
+                }
+            } catch (error) {
+                showResult('processResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function updateManualCategoryParents(categories) {
+            const select = document.getElementById('manualCategoryParent');
+            
+            // Clear existing options except the first one
+            select.innerHTML = '<option value="">Select parent (optional)</option>';
+            
+            // Add all loaded categories as potential parents
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.fullname || category.name;
+                select.appendChild(option);
+            });
+        }
+
+        async function createManualCategory() {
+            const name = document.getElementById('manualCategoryName').value.trim();
+            const parentId = document.getElementById('manualCategoryParent').value.trim();
+            const isProductCategory = document.getElementById('manualCategoryIsProduct').checked;
+            
+            if (!name) {
+                showResult('processResult', 'error', 'Category name is required.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/categories/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        parent_id: parentId || null,
+                        product_category: isProductCategory
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('processResult', 'success', 
+                        `Category created successfully!\n` +
+                        `Name: ${result.category.name}\n` +
+                        `Full Name: ${result.category.fullname}\n` +
+                        `ID: ${result.category.id}\n` +
+                        `Product Category: ${result.category.product_category}\n` +
+                        `Depth: ${result.category.depth}`
+                    );
+                    
+                    // Clear the form
+                    document.getElementById('manualCategoryName').value = '';
+                    document.getElementById('manualCategoryParent').value = '';
+                    document.getElementById('manualCategoryIsProduct').checked = false;
+                    
+                    // If it's a product category, set it as selected
+                    if (isProductCategory) {
+                        document.getElementById('processCategoryId').value = result.category.id;
+                        await loadAttributes();
+                    }
+                    
+                    // Reload categories to include the new one
+                    await loadRootCategories();
+                } else {
+                    showResult('processResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('processResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        // Initialize with some sample data
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('editor').value = 'demo_user';
+            document.getElementById('simpleEditor').value = 'demo_user';
+        });
+    </script>
+</body>
+</html>

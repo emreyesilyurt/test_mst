@@ -1,0 +1,79 @@
+"""
+ManualTask model for tracking manual data imputation tasks.
+This module contains the ManualTask model for manual data editing and tracking.
+"""
+
+from sqlalchemy import Column, Integer, Text, String, DateTime, func, ForeignKey, Boolean
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
+from .base import Base
+from . import tables
+
+class ManualTask(Base):
+    __tablename__ = tables.get('manual_tasks').split('.')[1]
+    __table_args__ = {'schema': tables.get('manual_tasks').split('.')[0]}
+
+    id = Column(Integer, primary_key=True)
+    part_number_id = Column(Integer, ForeignKey(f"{tables.get('part_numbers')}.id"))  # Link to PartNumber table
+    part_number = Column(String, nullable=False)  # Part number string for quick reference
+    editor = Column(String, nullable=False)  # User or editor who made the change
+    
+    # Enhanced tracking fields
+    task_type = Column(String, default='manual_imputation')  # Type of manual task
+    status = Column(String, default='completed')  # Status: 'in_progress', 'completed', 'failed'
+    
+    # Data modification tracking
+    edited_fields = Column(JSONB)  # Key-value pairs of manually edited fields
+    affected_tables = Column(JSONB)  # List of tables that were affected by this manual task
+    changes_summary = Column(JSONB)  # Summary of what was changed (before/after values)
+    
+    # Metadata and traceability
+    note = Column(Text)  # Optional comment on why this change was made
+    source_url = Column(String)  # Optional reference URL for traceability
+    batch_id = Column(String)  # Optional batch identifier for grouping related manual tasks
+    
+    # Validation and quality control
+    validated = Column(Boolean, default=False)  # Whether the changes have been validated
+    validator = Column(String)  # Who validated the changes
+    validation_date = Column(DateTime)  # When the changes were validated
+    validation_notes = Column(Text)  # Notes from validation process
+    
+    # Timing information
+    processing_start_time = Column(DateTime)  # When the manual task started
+    processing_end_time = Column(DateTime)  # When the manual task completed
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Error handling
+    error_message = Column(Text)  # Error message if task failed
+    retry_count = Column(Integer, default=0)  # Number of retry attempts
+    
+    # Relationships
+    part_number_obj = relationship('PartNumber', back_populates='manual_tasks')
+    
+    def start_processing(self):
+        """Mark manual task as started processing"""
+        self.status = 'in_progress'
+        self.processing_start_time = func.now()
+        self.updated_at = func.now()
+    
+    def mark_completed(self):
+        """Mark manual task as completed"""
+        self.status = 'completed'
+        self.processing_end_time = func.now()
+        self.updated_at = func.now()
+    
+    def mark_failed(self, error_message: str):
+        """Mark manual task as failed with error message"""
+        self.status = 'failed'
+        self.error_message = error_message
+        self.processing_end_time = func.now()
+        self.updated_at = func.now()
+    
+    def validate_changes(self, validator: str, notes: str = None):
+        """Mark changes as validated"""
+        self.validated = True
+        self.validator = validator
+        self.validation_date = func.now()
+        self.validation_notes = notes
+        self.updated_at = func.now()

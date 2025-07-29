@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Data Imputation System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab:hover {
+            background: #5a6fd8;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .dynamic-section {
+            border: 2px dashed #e1e5e9;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .dynamic-section h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dynamic-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .dynamic-item .remove-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .add-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .add-btn:hover {
+            background: #218838;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .history-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .row {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Manual Data Imputation System</h1>
+            <p>Add and update product data with full traceability and logging</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('imputation')">Manual Imputation</button>
+            <button class="tab" onclick="showTab('history')">Task History</button>
+            <button class="tab" onclick="showTab('stats')">Statistics</button>
+        </div>
+
+        <!-- Manual Imputation Tab -->
+        <div id="imputation" class="tab-content active">
+            <h2>Create Manual Imputation Task</h2>
+            <form id="imputationForm">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="partNumber">Part Number *</label>
+                            <input type="text" id="partNumber" name="partNumber" required>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="editor">Editor *</label>
+                            <input type="text" id="editor" name="editor" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="notes">Notes</label>
+                            <textarea id="notes" name="notes" placeholder="Optional notes about the changes..."></textarea>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="sourceUrl">Source URL</label>
+                            <input type="url" id="sourceUrl" name="sourceUrl" placeholder="https://example.com/source">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Attributes Section -->
+                <div class="dynamic-section">
+                    <h3>📋 Product Attributes</h3>
+                    <div id="attributesContainer"></div>
+                    <button type="button" class="add-btn" onclick="addAttribute()">+ Add Attribute</button>
+                </div>
+
+                <!-- Product Extras Section -->
+                <div class="dynamic-section">
+                    <h3>📝 Product Extras</h3>
+                    <div id="extrasContainer"></div>
+                    <button type="button" class="add-btn" onclick="addExtra()">+ Add Extra</button>
+                </div>
+
+                <!-- Documents Section -->
+                <div class="dynamic-section">
+                    <h3>📄 Documents & Media</h3>
+                    <div id="documentsContainer"></div>
+                    <button type="button" class="add-btn" onclick="addDocument()">+ Add Document</button>
+                </div>
+
+                <!-- Sellers Section -->
+                <div class="dynamic-section">
+                    <h3>🏪 Sellers</h3>
+                    <div id="sellersContainer"></div>
+                    <button type="button" class="add-btn" onclick="addSeller()">+ Add Seller</button>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">Submit Manual Imputation</button>
+            </form>
+        </div>
+
+        <!-- Task History Tab -->
+        <div id="history" class="tab-content">
+            <h2>Manual Task History</h2>
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="filterPartNumber">Filter by Part Number</label>
+                        <input type="text" id="filterPartNumber" placeholder="Enter part number...">
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="filterEditor">Filter by Editor</label>
+                        <input type="text" id="filterEditor" placeholder="Enter editor name...">
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="add-btn" onclick="loadHistory()">Load History</button>
+            <div id="historyContainer" class="loading">Click "Load History" to view manual task history</div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div id="stats" class="tab-content">
+            <h2>Manual Imputation Statistics</h2>
+            <button type="button" class="add-btn" onclick="loadStats()">Load Statistics</button>
+            <div id="statsContainer" class="loading">Click "Load Statistics" to view system statistics</div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let attributeCount = 0;
+        let extraCount = 0;
+        let documentCount = 0;
+        let sellerCount = 0;
+
+        // API base URL - adjust this to match your FastAPI server
+        const API_BASE = '/manual';
+
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Dynamic form functions
+        function addAttribute() {
+            attributeCount++;
+            const container = document.getElementById('attributesContainer');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="removeItem(this)">×</button>
+                <div class="row">
+                    <div class="col">
+                        <label>Attribute Name</label>
+                        <input type="text" name="attr_name_${attributeCount}" placeholder="e.g., Voltage">
+                    </div>
+                    <div class="col">
+                        <label>Value</label>
+                        <input type="text" name="attr_value_${attributeCount}" placeholder="e.g., 3.3V">
+                    </div>
+                    <div class="col">
+                        <label>Unit (Optional)</label>
+                        <input type="text" name="attr_unit_${attributeCount}" placeholder="e.g., V">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function addExtra() {
+            extraCount++;
+            const container = document.getElementById('extrasContainer');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="removeItem(this)">×</button>
+                <div class="row">
+                    <div class="col">
+                        <label>Field Name</label>
+                        <input type="text" name="extra_name_${extraCount}" placeholder="e.g., Package Type">
+                    </div>
+                    <div class="col">
+                        <label>Value</label>
+                        <input type="text" name="extra_value_${extraCount}" placeholder="e.g., SOIC-8">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function addDocument() {
+            documentCount++;
+            const container = document.getElementById('documentsContainer');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="removeItem(this)">×</button>
+                <div class="row">
+                    <div class="col">
+                        <label>Document URL</label>
+                        <input type="url" name="doc_url_${documentCount}" placeholder="https://example.com/datasheet.pdf">
+                    </div>
+                    <div class="col">
+                        <label>Type</label>
+                        <select name="doc_type_${documentCount}">
+                            <option value="datasheet">Datasheet</option>
+                            <option value="image">Image</option>
+                            <option value="document">Document</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description (Optional)</label>
+                    <input type="text" name="doc_desc_${documentCount}" placeholder="Brief description...">
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function addSeller() {
+            sellerCount++;
+            const container = document.getElementById('sellersContainer');
+            const div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = `
+                <button type="button" class="remove-btn" onclick="removeItem(this)">×</button>
+                <div class="row">
+                    <div class="col">
+                        <label>Seller Name</label>
+                        <input type="text" name="seller_name_${sellerCount}" placeholder="e.g., Digi-Key">
+                    </div>
+                    <div class="col">
+                        <label>Type</label>
+                        <select name="seller_type_${sellerCount}">
+                            <option value="distributor">Distributor</option>
+                            <option value="manufacturer">Manufacturer</option>
+                            <option value="retailer">Retailer</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeItem(button) {
+            button.parentElement.remove();
+        }
+
+        // Form submission
+        document.getElementById('imputationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+            
+            try {
+                const formData = new FormData(this);
+                const data = {
+                    part_number: formData.get('partNumber'),
+                    editor: formData.get('editor'),
+                    notes: formData.get('notes') || null,
+                    source_url: formData.get('sourceUrl') || null,
+                    attributes: [],
+                    extras: [],
+                    documents: [],
+                    sellers: []
+                };
+
+                // Collect attributes
+                for (let i = 1; i <= attributeCount; i++) {
+                    const name = formData.get(`attr_name_${i}`);
+                    const value = formData.get(`attr_value_${i}`);
+                    const unit = formData.get(`attr_unit_${i}`);
+                    if (name && value) {
+                        data.attributes.push({ name, value, unit: unit || null });
+                    }
+                }
+
+                // Collect extras
+                for (let i = 1; i <= extraCount; i++) {
+                    const name = formData.get(`extra_name_${i}`);
+                    const value = formData.get(`extra_value_${i}`);
+                    if (name && value) {
+                        data.extras.push({ name, value });
+                    }
+                }
+
+                // Collect documents
+                for (let i = 1; i <= documentCount; i++) {
+                    const url = formData.get(`doc_url_${i}`);
+                    const type = formData.get(`doc_type_${i}`);
+                    const description = formData.get(`doc_desc_${i}`);
+                    if (url) {
+                        data.documents.push({ url, type, description: description || '' });
+                    }
+                }
+
+                // Collect sellers
+                for (let i = 1; i <= sellerCount; i++) {
+                    const name = formData.get(`seller_name_${i}`);
+                    const type = formData.get(`seller_type_${i}`);
+                    if (name) {
+                        data.sellers.push({ name, type });
+                    }
+                }
+
+                const response = await fetch(`${API_BASE}/imputation/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('success', `Manual imputation completed successfully! Task ID: ${result.task_id}`);
+                    this.reset();
+                    // Clear dynamic sections
+                    document.getElementById('attributesContainer').innerHTML = '';
+                    document.getElementById('extrasContainer').innerHTML = '';
+                    document.getElementById('documentsContainer').innerHTML = '';
+                    document.getElementById('sellersContainer').innerHTML = '';
+                    attributeCount = extraCount = documentCount = sellerCount = 0;
+                } else {
+                    showAlert('error', result.detail || 'An error occurred');
+                }
+            } catch (error) {
+                showAlert('error', 'Network error: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Manual Imputation';
+            }
+        });
+
+        // Load task history
+        async function loadHistory() {
+            const container = document.getElementById('historyContainer');
+            container.innerHTML = '<div class="loading">Loading history...</div>';
+            
+            try {
+                const partNumber = document.getElementById('filterPartNumber').value;
+                const editor = document.getElementById('filterEditor').value;
+                
+                let url = `${API_BASE}/history/?limit=50`;
+                if (partNumber) url += `&part_number=${encodeURIComponent(partNumber)}`;
+                if (editor) url += `&editor=${encodeURIComponent(editor)}`;
+                
+                const response = await fetch(url);
+                const tasks = await response.json();
+                
+                if (tasks.length === 0) {
+                    container.innerHTML = '<p>No manual tasks found.</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Part Number</th>
+                                <th>Editor</th>
+                                <th>Status</th>
+                                <th>Changes</th>
+                                <th>Created</th>
+                                <th>Validated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                tasks.forEach(task => {
+                    const statusClass = `status-${task.status.replace('_', '-')}`;
+                    const createdDate = new Date(task.created_at).toLocaleDateString();
+                    const validatedIcon = task.validated ? '✅' : '❌';
+                    
+                    html += `
+                        <tr>
+                            <td>${task.id}</td>
+                            <td>${task.part_number}</td>
+                            <td>${task.editor}</td>
+                            <td><span class="status-badge ${statusClass}">${task.status}</span></td>
+                            <td>${task.changes_count || 0}</td>
+                            <td>${createdDate}</td>
+                            <td>${validatedIcon}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">Error loading history: ${error.message}</div>`;
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            const container = document.getElementById('statsContainer');
+            container.innerHTML = '<div class="loading">Loading statistics...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/stats/`);
+                const stats = await response.json();
+                
+                const html = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                        <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;">
+                            <h3 style="color: #667eea; margin-bottom: 0.5rem;">Total Tasks</h3>
+                            <p style="font-size: 2rem; font-weight: bold; color: #333;">${stats.total_tasks}</p>
+                        </div>
+                        <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;">
+                            <h3 style="color: #28a745; margin-bottom: 0.5rem;">Completed</h3>
+                            <p style="font-size: 2rem; font-weight: bold; color: #333;">${stats.completed_tasks}</p>
+                        </div>
+                        <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;">
+                            <h3 style="color: #dc3545; margin-bottom: 0.5rem;">Failed</h3>
+                            <p style="font-size: 2rem; font-weight: bold; color: #333;">${stats.failed_tasks}</p>
+                        </div>
+                        <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;">
+                            <h3 style="color: #ffc107; margin-bottom: 0.5rem;">Validated</h3>
+                            <p style="font-size: 2rem; font-weight: bold; color: #333;">${stats.validated_tasks}</p>
+                        </div>
+                        <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;">
+                            <h3 style="color: #6f42c1; margin-bottom: 0.5rem;">Unique Editors</h3>
+                            <p style="font-size: 2rem; font-weight: bold; color: #333;">${stats.unique_editors}</p>
+                        </div>
+                        <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;">
+                            <h3 style="color: #17a2b8; margin-bottom: 0.5rem;">Success Rate</h3>
+                            <p style="font-size: 2rem; font-weight: bold; color: #333;">${stats.success_rate}%</p>
+                        </div>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                container.innerHTML = `<div class="alert alert-error">Error loading statistics: ${error.message}</div>`;
+            }
+        }
+
+        // Utility function to show alerts
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            const form = document.getElementById('imputationForm');
+            form.insertBefore(alertDiv, form.firstChild);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Initialize with some default items
+        document.addEventListener('DOMContentLoaded', function() {
+            addAttribute();
+            addExtra();
+        });
+    </script>
+</body>
+</html>

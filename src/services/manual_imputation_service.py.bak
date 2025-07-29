@@ -1,0 +1,535 @@
+"""
+Manual Imputation Service for handling manual data entry and updates.
+This service provides comprehensive functionality for manual data imputation
+with proper logging, validation, and traceability.
+"""
+
+import asyncio
+from datetime import datetime
+from typing import Dict, List, Optional, Any, Union
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy import select, and_, or_
+from sqlalchemy.orm import selectinload
+
+from src.config.database import get_supabase_async_engine
+from src.db.models import (
+    Product, PartNumber, Manufacturer, Category, Attribute,
+    ProductAttribute, ProductExtra, DocumentMedia, ProductSeller,
+    ManualTask
+)
+from src.db.repositories.async_repositories import (
+    ProductRepository, PartNumberRepository, ManufacturerRepository,
+    ProductAttributeRepository, ProductExtraRepository, DocumentMediaRepository,
+    ProductSellerRepository, CategoryRepository
+)
+
+
+class ManualImputationService:
+    """
+    Service class for handling manual data imputation operations.
+    Provides methods for creating, updating, and tracking manual data changes.
+    """
+    
+    def __init__(self):
+        self.async_engine = get_supabase_async_engine()
+        self.AsyncSessionLocal = async_sessionmaker(bind=self.async_engine, expire_on_commit=False)
+    
+    async def create_manual_task(
+        self,
+        part_number: str,
+        editor: str,
+        data_updates: Dict[str, Any],
+        notes: Optional[str] = None,
+        source_url: Optional[str] = None,
+        batch_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Create a new manual imputation task and apply the data updates.
+        
+        Args:
+            part_number: The part number to update
+            editor: Username/ID of the person making the changes
+            data_updates: Dictionary containing the data to update
+            notes: Optional notes about the changes
+            source_url: Optional source URL for traceability
+            batch_id: Optional batch identifier for grouping related tasks
+            
+        Returns:
+            Dictionary with task information and results
+        """
+        async with self.AsyncSessionLocal() as session:
+            try:
+                # Create manual task record
+                manual_task = ManualTask(
+                    part_number=part_number,
+                    editor=editor,
+                    task_type='manual_imputation',
+                    edited_fields=data_updates,
+                    note=notes,
+                    source_url=source_url,
+                    batch_id=batch_id or f"manual_{int(datetime.now().timestamp())}"
+                )
+                manual_task.start_processing()
+                
+                session.add(manual_task)
+                await session.flush()  # Get the ID
+                
+                # Process the data updates
+                results = await self._process_data_updates(
+                    session, part_number, data_updates, manual_task, editor, notes, source_url
+                )
+                
+                # Update manual task with results
+                manual_task.affected_tables = results.get('affected_tables', [])
+                manual_task.changes_summary = results.get('changes_summary', {})
+                manual_task.mark_completed()
+                
+                await session.commit()
+                
+                return {
+                    'status': 'success',
+                    'task_id': manual_task.id,
+                    'part_number': part_number,
+                    'affected_tables': results.get('affected_tables', []),
+                    'changes_count': results.get('changes_count', 0),
+                    'message': f'Manual imputation completed for {part_number}'
+                }
+                
+            except Exception as e:
+                await session.rollback()
+                if 'manual_task' in locals():
+                    manual_task.mark_failed(str(e))
+                    await session.commit()
+                
+                return {
+                    'status': 'error',
+                    'message': f'Failed to process manual imputation: {str(e)}',
+                    'part_number': part_number
+                }
+    
+    async def _process_data_updates(
+        self,
+        session: AsyncSession,
+        part_number: str,
+        data_updates: Dict[str, Any],
+        manual_task: ManualTask,
+        editor: str,
+        notes: Optional[str],
+        source_url: Optional[str]
+    ) -> Dict[str, Any]:
+        """
+        Process the actual data updates for a part number.
+        
+        Args:
+            session: Database session
+            part_number: Part number to update
+            data_updates: Data to update
+            manual_task: Manual task record
+            editor: Editor username
+            notes: Optional notes
+            source_url: Optional source URL
+            
+        Returns:
+            Dictionary with processing results
+        """
+        affected_tables = []
+        changes_summary = {}
+        changes_count = 0
+        
+        # Get or create part number record
+        part_number_repo = PartNumberRepository(session)
+        pn_records = await part_number_repo.list(name=part_number)
+        
+        if not pn_records:
+            # Create new part number
+            pn_record = PartNumber(
+                name=part_number,
+                notes=notes,
+                source_url=source_url,
+                manual_editor=editor,
+                last_manual_update=datetime.now()
+            )
+            session.add(pn_record)
+            await session.flush()
+            pn_record.product_id = pn_record.id
+            affected_tables.append('part_numbers')
+            changes_count += 1
+        else:
+            pn_record = pn_records[0]
+            # Update part number with manual fields
+            if notes:
+                pn_record.notes = notes
+            if source_url:
+                pn_record.source_url = source_url
+            pn_record.manual_editor = editor
+            pn_record.last_manual_update = datetime.now()
+            affected_tables.append('part_numbers')
+        
+        # Get or create product record
+        product_repo = ProductRepository(session)
+        products = await session.execute(
+            select(Product).where(Product.part_number == pn_record.product_id)
+        )
+        product = products.scalar_one_or_none()
+        
+        if not product:
+            # Create new product
+            product = Product(part_number=pn_record.product_id)
+            session.add(product)
+            await session.flush()
+            affected_tables.append('products')
+            changes_count += 1
+        
+        # Process different types of updates
+        if 'attributes' in data_updates:
+            attr_results = await self._update_product_attributes(
+                session, product, data_updates['attributes'], manual_task, editor, notes, source_url
+            )
+            affected_tables.extend(attr_results['affected_tables'])
+            changes_summary['attributes'] = attr_results['changes']
+            changes_count += attr_results['count']
+        
+        if 'extras' in data_updates:
+            extra_results = await self._update_product_extras(
+                session, product, data_updates['extras'], manual_task, editor, notes, source_url
+            )
+            affected_tables.extend(extra_results['affected_tables'])
+            changes_summary['extras'] = extra_results['changes']
+            changes_count += extra_results['count']
+        
+        if 'documents' in data_updates:
+            doc_results = await self._update_document_media(
+                session, product, data_updates['documents'], manual_task, editor, notes, source_url
+            )
+            affected_tables.extend(doc_results['affected_tables'])
+            changes_summary['documents'] = doc_results['changes']
+            changes_count += doc_results['count']
+        
+        if 'sellers' in data_updates:
+            seller_results = await self._update_product_sellers(
+                session, product, data_updates['sellers'], manual_task, editor, notes, source_url
+            )
+            affected_tables.extend(seller_results['affected_tables'])
+            changes_summary['sellers'] = seller_results['changes']
+            changes_count += seller_results['count']
+        
+        # Update manual task reference
+        manual_task.part_number_id = pn_record.id
+        
+        return {
+            'affected_tables': list(set(affected_tables)),
+            'changes_summary': changes_summary,
+            'changes_count': changes_count
+        }
+    
+    async def _update_product_attributes(
+        self,
+        session: AsyncSession,
+        product: Product,
+        attributes: List[Dict[str, Any]],
+        manual_task: ManualTask,
+        editor: str,
+        notes: Optional[str],
+        source_url: Optional[str]
+    ) -> Dict[str, Any]:
+        """Update product attributes with manual data."""
+        affected_tables = []
+        changes = []
+        count = 0
+        
+        for attr_data in attributes:
+            attr_name = attr_data.get('name')
+            attr_value = attr_data.get('value')
+            attr_unit = attr_data.get('unit')
+            
+            if not attr_name or not attr_value:
+                continue
+            
+            # Get or create attribute
+            attribute = await session.scalar(
+                select(Attribute).where(Attribute.name == attr_name)
+            )
+            if not attribute:
+                attribute = Attribute(name=attr_name)
+                session.add(attribute)
+                await session.flush()
+            
+            # Create product attribute
+            product_attr = ProductAttribute(
+                product_id=product.product_id,
+                attribute_id=attribute.id,
+                value_text=str(attr_value),
+                value_unit=attr_unit,
+                source='manual',
+                manual_task_id=manual_task.id,
+                notes=notes,
+                source_url=source_url,
+                manual_editor=editor,
+                is_manual='true'
+            )
+            session.add(product_attr)
+            
+            affected_tables.extend(['attributes', 'product_attributes'])
+            changes.append({
+                'attribute': attr_name,
+                'value': attr_value,
+                'unit': attr_unit
+            })
+            count += 1
+        
+        return {
+            'affected_tables': affected_tables,
+            'changes': changes,
+            'count': count
+        }
+    
+    async def _update_product_extras(
+        self,
+        session: AsyncSession,
+        product: Product,
+        extras: List[Dict[str, Any]],
+        manual_task: ManualTask,
+        editor: str,
+        notes: Optional[str],
+        source_url: Optional[str]
+    ) -> Dict[str, Any]:
+        """Update product extras with manual data."""
+        affected_tables = []
+        changes = []
+        count = 0
+        
+        for extra_data in extras:
+            extra_name = extra_data.get('name')
+            extra_value = extra_data.get('value')
+            
+            if not extra_name or not extra_value:
+                continue
+            
+            product_extra = ProductExtra(
+                product_id=product.product_id,
+                name=extra_name,
+                value=str(extra_value),
+                source='manual',
+                manual_task_id=manual_task.id,
+                notes=notes,
+                source_url=source_url,
+                manual_editor=editor,
+                is_manual='true'
+            )
+            session.add(product_extra)
+            
+            affected_tables.append('product_extras')
+            changes.append({
+                'name': extra_name,
+                'value': extra_value
+            })
+            count += 1
+        
+        return {
+            'affected_tables': affected_tables,
+            'changes': changes,
+            'count': count
+        }
+    
+    async def _update_document_media(
+        self,
+        session: AsyncSession,
+        product: Product,
+        documents: List[Dict[str, Any]],
+        manual_task: ManualTask,
+        editor: str,
+        notes: Optional[str],
+        source_url: Optional[str]
+    ) -> Dict[str, Any]:
+        """Update document media with manual data."""
+        affected_tables = []
+        changes = []
+        count = 0
+        
+        for doc_data in documents:
+            doc_url = doc_data.get('url')
+            doc_type = doc_data.get('type', 'document')
+            doc_description = doc_data.get('description', '')
+            
+            if not doc_url:
+                continue
+            
+            document = DocumentMedia(
+                product_id=product.product_id,
+                url=doc_url,
+                type=doc_type,
+                description=doc_description,
+                source='manual',
+                manual_task_id=manual_task.id,
+                notes=notes,
+                source_url=source_url,
+                manual_editor=editor,
+                is_manual='true'
+            )
+            session.add(document)
+            
+            affected_tables.append('document_media')
+            changes.append({
+                'url': doc_url,
+                'type': doc_type,
+                'description': doc_description
+            })
+            count += 1
+        
+        return {
+            'affected_tables': affected_tables,
+            'changes': changes,
+            'count': count
+        }
+    
+    async def _update_product_sellers(
+        self,
+        session: AsyncSession,
+        product: Product,
+        sellers: List[Dict[str, Any]],
+        manual_task: ManualTask,
+        editor: str,
+        notes: Optional[str],
+        source_url: Optional[str]
+    ) -> Dict[str, Any]:
+        """Update product sellers with manual data."""
+        affected_tables = []
+        changes = []
+        count = 0
+        
+        for seller_data in sellers:
+            seller_name = seller_data.get('name')
+            seller_type = seller_data.get('type', 'distributor')
+            
+            if not seller_name:
+                continue
+            
+            # Generate seller_id
+            seller_id = f"{product.product_id}_{seller_name}_{int(datetime.now().timestamp())}"
+            
+            product_seller = ProductSeller(
+                seller_id=seller_id,
+                product_id=product.product_id,
+                seller_name=seller_name,
+                seller_type=seller_type,
+                source='manual',
+                manual_task_id=manual_task.id,
+                notes=notes,
+                source_url=source_url,
+                manual_editor=editor,
+                is_manual='true'
+            )
+            session.add(product_seller)
+            
+            affected_tables.append('product_sellers')
+            changes.append({
+                'name': seller_name,
+                'type': seller_type
+            })
+            count += 1
+        
+        return {
+            'affected_tables': affected_tables,
+            'changes': changes,
+            'count': count
+        }
+    
+    async def get_manual_task_history(
+        self,
+        part_number: Optional[str] = None,
+        editor: Optional[str] = None,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """
+        Get manual task history with optional filtering.
+        
+        Args:
+            part_number: Filter by part number
+            editor: Filter by editor
+            limit: Maximum number of records to return
+            
+        Returns:
+            List of manual task records
+        """
+        async with self.AsyncSessionLocal() as session:
+            query = select(ManualTask).order_by(ManualTask.created_at.desc()).limit(limit)
+            
+            if part_number:
+                query = query.where(ManualTask.part_number == part_number)
+            
+            if editor:
+                query = query.where(ManualTask.editor == editor)
+            
+            result = await session.execute(query)
+            tasks = result.scalars().all()
+            
+            return [
+                {
+                    'id': task.id,
+                    'part_number': task.part_number,
+                    'editor': task.editor,
+                    'status': task.status,
+                    'task_type': task.task_type,
+                    'edited_fields': task.edited_fields,
+                    'affected_tables': task.affected_tables,
+                    'changes_summary': task.changes_summary,
+                    'note': task.note,
+                    'source_url': task.source_url,
+                    'batch_id': task.batch_id,
+                    'validated': task.validated,
+                    'validator': task.validator,
+                    'validation_date': task.validation_date,
+                    'created_at': task.created_at,
+                    'updated_at': task.updated_at,
+                    'processing_start_time': task.processing_start_time,
+                    'processing_end_time': task.processing_end_time
+                }
+                for task in tasks
+            ]
+    
+    async def validate_manual_task(
+        self,
+        task_id: int,
+        validator: str,
+        validation_notes: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Validate a manual task.
+        
+        Args:
+            task_id: ID of the manual task to validate
+            validator: Username of the validator
+            validation_notes: Optional validation notes
+            
+        Returns:
+            Dictionary with validation results
+        """
+        async with self.AsyncSessionLocal() as session:
+            try:
+                task = await session.scalar(
+                    select(ManualTask).where(ManualTask.id == task_id)
+                )
+                
+                if not task:
+                    return {
+                        'status': 'error',
+                        'message': f'Manual task {task_id} not found'
+                    }
+                
+                task.validate_changes(validator, validation_notes)
+                await session.commit()
+                
+                return {
+                    'status': 'success',
+                    'message': f'Manual task {task_id} validated successfully',
+                    'task_id': task_id,
+                    'validator': validator,
+                    'validation_date': task.validation_date
+                }
+                
+            except Exception as e:
+                await session.rollback()
+                return {
+                    'status': 'error',
+                    'message': f'Failed to validate manual task: {str(e)}'
+                }
