@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from typing import Union
+from pydantic import BaseModel, Field, validator
 from typing import Dict, List, Optional
 from datetime import datetime
 
@@ -116,3 +117,75 @@ class TaskHistoryResponse(BaseModel):
     changes_summary: Optional[Dict]
     created_date: datetime
     updated_date: datetime
+
+
+# -------------------------------
+# Batch Operations Schemas
+# -------------------------------
+
+class BatchTaskRequest(BaseModel):
+    tasks: List[ManualImputationRequest] = Field(..., description="List of tasks to create")
+    batch_id: Optional[str] = Field(None, description="Optional batch identifier")
+
+class BatchTaskResult(BaseModel):
+    index: int
+    task_id: Optional[int] = None
+    part_number: str
+    status: str  # 'success' or 'failed'
+    error: Optional[str] = None
+
+class BatchTaskResponse(BaseModel):
+    status: str
+    batch_id: str
+    summary: Dict[str, int]
+    results: List[BatchTaskResult]
+
+# -------------------------------
+# CSV Import Schema
+# -------------------------------
+
+class CSVImportRequest(BaseModel):
+    editor: str = Field(..., description="Editor performing the import")
+    batch_id: Optional[str] = Field(None, description="Optional batch identifier")
+    validate_only: bool = Field(False, description="Only validate, don't create tasks")
+
+class CSVImportResponse(BaseModel):
+    status: str
+    batch_id: Optional[str] = None
+    total_rows: int
+    successful: int
+    failed: int
+    validation_errors: List[Dict[str, str]] = []
+    created_tasks: List[int] = []
+
+
+# -------------------------------
+# Advanced Search Schema
+# -------------------------------
+class AdvancedSearchRequest(BaseModel):
+    query: Optional[str] = None
+    manufacturer_id: Optional[int] = None
+    category_id: Optional[str] = None
+    editor: Optional[str] = None
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
+    has_attributes: Optional[bool] = None
+    has_documents: Optional[bool] = None
+    sort_by: str = "relevance"
+    page: int = Field(1, ge=1)
+    page_size: int = Field(25, ge=1, le=100)
+
+class SearchResult(BaseModel):
+    part_number: str
+    product_id: Optional[int]
+    manufacturer: Optional[str]
+    category: Optional[str]
+    last_updated: Optional[datetime]
+    attributes_count: int = 0
+    documents_count: int = 0
+
+class AdvancedSearchResponse(BaseModel):
+    results: List[SearchResult]
+    pagination: Dict[str, int]
+    filters_applied: Dict[str, Union[str, int, bool]]
+    total_found: int

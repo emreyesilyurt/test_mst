@@ -6,10 +6,11 @@ with proper logging, validation, and traceability.
 
 import asyncio
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy import select, and_, or_, func
 from sqlalchemy.orm import selectinload
+
 
 from src.db.connections import get_supabase_async_engine
 from src.db.models import (
@@ -1077,79 +1078,159 @@ class ManualImputationService:
             await session.commit()
             return True
 
-    async def get_tasks_by_filters(
-        self,
-        product_id: Optional[int] = None,
-        part_number: Optional[str] = None,
-        last_updated_days: Optional[int] = None,
-        status: Optional[str] = None,
-        editor: Optional[str] = None,
-        limit: int = 100
-    ) -> List[Dict[str, Any]]:
-        """
-        Get tasks with various filtering options.
+    # async def get_tasks_by_filters(
+    #     self,
+    #     product_id: Optional[int] = None,
+    #     part_number: Optional[str] = None,
+    #     last_updated_days: Optional[int] = None,
+    #     status: Optional[str] = None,
+    #     editor: Optional[str] = None,
+    #     limit: int = 100
+    # ) -> List[Dict[str, Any]]:
+    #     """
+    #     Get tasks with various filtering options.
         
-        Args:
-            product_id: Filter by product ID
-            part_number: Filter by part number
-            last_updated_days: Filter by tasks updated in last N days
-            status: Filter by task status
-            editor: Filter by editor
-            limit: Maximum number of records to return
+    #     Args:
+    #         product_id: Filter by product ID
+    #         part_number: Filter by part number
+    #         last_updated_days: Filter by tasks updated in last N days
+    #         status: Filter by task status
+    #         editor: Filter by editor
+    #         limit: Maximum number of records to return
             
-        Returns:
-            List of manual task records
-        """
-        async with self.AsyncSessionLocal() as session:
-            query = select(ManualTask).order_by(ManualTask.updated_date.desc()).limit(limit)
+    #     Returns:
+    #         List of manual task records
+    #     """
+    #     async with self.AsyncSessionLocal() as session:
+    #         query = select(ManualTask).order_by(ManualTask.updated_date.desc()).limit(limit)
             
-            # Apply filters
-            if product_id:
-                query = query.where(ManualTask.product_id == product_id)
+    #         # Apply filters
+    #         if product_id:
+    #             query = query.where(ManualTask.product_id == product_id)
             
-            if part_number:
-                # Join with PartNumber to filter by part number name
-                query = query.join(Product, ManualTask.product_id == Product.product_id)\
-                            .join(PartNumber, Product.part_number == PartNumber.product_id)\
-                            .where(PartNumber.name.ilike(f"%{part_number}%"))
+    #         if part_number:
+    #             # Join with PartNumber to filter by part number name
+    #             query = query.join(Product, ManualTask.product_id == Product.product_id)\
+    #                         .join(PartNumber, Product.part_number == PartNumber.product_id)\
+    #                         .where(PartNumber.name.ilike(f"%{part_number}%"))
             
-            if last_updated_days:
-                from datetime import datetime, timedelta
-                cutoff_date = datetime.now() - timedelta(days=last_updated_days)
-                query = query.where(ManualTask.updated_date >= cutoff_date)
+    #         if last_updated_days:
+    #             from datetime import datetime, timedelta
+    #             cutoff_date = datetime.now() - timedelta(days=last_updated_days)
+    #             query = query.where(ManualTask.updated_date >= cutoff_date)
             
-            if status:
-                query = query.where(ManualTask.current_status == status)
+    #         if status:
+    #             query = query.where(ManualTask.current_status == status)
             
-            if editor:
-                query = query.where(ManualTask.editor == editor)
+    #         if editor:
+    #             query = query.where(ManualTask.editor == editor)
             
-            result = await session.execute(query)
-            tasks = result.scalars().all()
+    #         result = await session.execute(query)
+    #         tasks = result.scalars().all()
             
-            return [
-                {
-                    'id': task.id,
-                    'product_id': task.product_id,
-                    'editor': task.editor,
-                    'current_status': task.current_status,
-                    'task_type': task.task_type,
-                    'edited_fields': task.edited_fields,
-                    'affected_tables': task.affected_tables,
-                    'changes_summary': task.changes_summary,
-                    'note': task.note,
-                    'source_url': task.source_url,
-                    'batch_id': task.batch_id,
-                    'validated': task.validated,
-                    'validator': task.validator,
-                    'validation_date': task.validation_date,
-                    'processing_info': task.processing_info,
-                    'error_message': task.error_message,
-                    'created_date': task.created_date,
-                    'updated_date': task.updated_date
-                }
-                for task in tasks
-            ]
+    #         return [
+    #             {
+    #                 'id': task.id,
+    #                 'product_id': task.product_id,
+    #                 'editor': task.editor,
+    #                 'current_status': task.current_status,
+    #                 'task_type': task.task_type,
+    #                 'edited_fields': task.edited_fields,
+    #                 'affected_tables': task.affected_tables,
+    #                 'changes_summary': task.changes_summary,
+    #                 'note': task.note,
+    #                 'source_url': task.source_url,
+    #                 'batch_id': task.batch_id,
+    #                 'validated': task.validated,
+    #                 'validator': task.validator,
+    #                 'validation_date': task.validation_date,
+    #                 'processing_info': task.processing_info,
+    #                 'error_message': task.error_message,
+    #                 'created_date': task.created_date,
+    #                 'updated_date': task.updated_date
+    #             }
+    #             for task in tasks
+    #         ]
+
+async def get_tasks_by_filters(
+    self,
+    product_id: Optional[int] = None,
+    part_number: Optional[str] = None,
+    last_updated_days: Optional[int] = None,
+    status: Optional[str] = None,
+    editor: Optional[str] = None,
+    batch_id: Optional[str] = None,  # Add this parameter
+    limit: int = 100
+) -> List[Dict[str, Any]]:
+    """
+    Get tasks with various filtering options.
+    
+    Args:
+        product_id: Filter by product ID
+        part_number: Filter by part number
+        last_updated_days: Filter by tasks updated in last N days
+        status: Filter by task status
+        editor: Filter by editor
+        batch_id: Filter by batch ID  # Add this documentation
+        limit: Maximum number of records to return
+        
+    Returns:
+        List of manual task records
+    """
+    async with self.AsyncSessionLocal() as session:
+        query = select(ManualTask).order_by(ManualTask.updated_date.desc()).limit(limit)
+        
+        # Apply filters
+        if product_id:
+            query = query.where(ManualTask.product_id == product_id)
+        
+        if part_number:
+            # Join with PartNumber to filter by part number name
+            query = query.join(Product, ManualTask.product_id == Product.product_id)\
+                        .join(PartNumber, Product.part_number == PartNumber.product_id)\
+                        .where(PartNumber.name.ilike(f"%{part_number}%"))
+        
+        if last_updated_days:
+            from datetime import datetime, timedelta
+            cutoff_date = datetime.now() - timedelta(days=last_updated_days)
+            query = query.where(ManualTask.updated_date >= cutoff_date)
+        
+        if status:
+            query = query.where(ManualTask.current_status == status)
+        
+        if editor:
+            query = query.where(ManualTask.editor == editor)
+        
+        # Add batch_id filter
+        if batch_id:
+            query = query.where(ManualTask.batch_id == batch_id)
+        
+        result = await session.execute(query)
+        tasks = result.scalars().all()
+        
+        return [
+            {
+                'id': task.id,
+                'product_id': task.product_id,
+                'editor': task.editor,
+                'current_status': task.current_status,
+                'task_type': task.task_type,
+                'edited_fields': task.edited_fields,
+                'affected_tables': task.affected_tables,
+                'changes_summary': task.changes_summary,
+                'note': task.note,
+                'source_url': task.source_url,
+                'batch_id': task.batch_id,
+                'validated': task.validated,
+                'validator': task.validator,
+                'validation_date': task.validation_date,
+                'processing_info': task.processing_info,
+                'error_message': task.error_message,
+                'created_date': task.created_date,
+                'updated_date': task.updated_date
+            }
+            for task in tasks
+        ]
 
     async def search_part_numbers(
         self,
@@ -1753,3 +1834,364 @@ class ManualImputationService:
             'changes': changes,
             'count': count
         }
+
+
+    async def create_batch_tasks(
+        self, 
+        tasks_data: List[Dict[str, Any]], 
+        batch_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Create multiple manual tasks in a single batch operation.
+        
+        Args:
+            tasks_data: List of task data dictionaries
+            batch_id: Optional batch identifier
+            
+        Returns:
+            Dictionary with batch results
+        """
+        if not batch_id:
+            batch_id = f"batch_{int(datetime.now().timestamp())}"
+        
+        results = {
+            'batch_id': batch_id,
+            'total_count': len(tasks_data),
+            'successful': [],
+            'failed': []
+        }
+        
+        async with self.AsyncSessionLocal() as session:
+            try:
+                for i, task_data in enumerate(tasks_data):
+                    try:
+                        # Add batch_id to task data
+                        task_data['batch_id'] = batch_id
+                        
+                        # Create individual task
+                        result = await self.create_manual_task(
+                            part_number=task_data.get('part_number'),
+                            editor=task_data.get('editor'),
+                            data_updates=task_data.get('data_updates', {}),
+                            notes=task_data.get('notes'),
+                            source_url=task_data.get('source_url'),
+                            batch_id=batch_id
+                        )
+                        
+                        if result['status'] == 'success':
+                            results['successful'].append({
+                                'index': i,
+                                'task_id': result['task_id'],
+                                'part_number': task_data.get('part_number'),
+                                'status': 'success'
+                            })
+                        else:
+                            results['failed'].append({
+                                'index': i,
+                                'part_number': task_data.get('part_number'),
+                                'status': 'failed',
+                                'error': result.get('message', 'Unknown error')
+                            })
+                            
+                    except Exception as e:
+                        results['failed'].append({
+                            'index': i,
+                            'part_number': task_data.get('part_number', 'Unknown'),
+                            'status': 'failed',
+                            'error': str(e)
+                        })
+                
+                return results
+                
+            except Exception as e:
+                raise Exception(f"Batch operation failed: {str(e)}")
+
+    async def process_csv_import(
+        self, 
+        csv_content: str, 
+        editor: str, 
+        batch_id: Optional[str] = None,
+        validate_only: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Process CSV import for batch task creation.
+        
+        Args:
+            csv_content: CSV file content as string
+            editor: Editor performing the import
+            batch_id: Optional batch identifier
+            validate_only: If True, only validate without creating tasks
+            
+        Returns:
+            Dictionary with import results
+        """
+        if not batch_id:
+            batch_id = f"csv_import_{int(datetime.now().timestamp())}"
+        
+        results = {
+            'batch_id': batch_id if not validate_only else None,
+            'total_rows': 0,
+            'successful': 0,
+            'failed': 0,
+            'validation_errors': [],
+            'created_tasks': []
+        }
+        
+        try:
+            # Parse CSV
+            csv_reader = csv.DictReader(io.StringIO(csv_content))
+            
+            # Validate required columns
+            required_columns = ['part_number']
+            if not all(col in csv_reader.fieldnames for col in required_columns):
+                missing = [col for col in required_columns if col not in csv_reader.fieldnames]
+                raise ValueError(f"Missing required columns: {', '.join(missing)}")
+            
+            tasks_to_create = []
+            
+            for row_num, row in enumerate(csv_reader, 1):
+                results['total_rows'] += 1
+                
+                try:
+                    # Validate row data
+                    if not row.get('part_number', '').strip():
+                        results['validation_errors'].append({
+                            'row': row_num,
+                            'error': 'Part number is required'
+                        })
+                        results['failed'] += 1
+                        continue
+                    
+                    # Build task data
+                    task_data = {
+                        'part_number': row['part_number'].strip(),
+                        'editor': editor,
+                        'batch_id': batch_id,
+                        'notes': row.get('notes', '').strip(),
+                        'source_url': row.get('source_url', '').strip(),
+                        'data_updates': {}
+                    }
+                    
+                    # Add attributes if provided
+                    if row.get('attribute_name') and row.get('attribute_value'):
+                        task_data['data_updates']['attributes'] = [{
+                            'name': row['attribute_name'].strip(),
+                            'value': row['attribute_value'].strip(),
+                            'unit': row.get('attribute_unit', '').strip() or None
+                        }]
+                    
+                    # Add extras if provided
+                    if row.get('extra_name') and row.get('extra_value'):
+                        task_data['data_updates']['extras'] = [{
+                            'name': row['extra_name'].strip(),
+                            'value': row['extra_value'].strip()
+                        }]
+                    
+                    # Add documents if provided
+                    if row.get('document_url'):
+                        task_data['data_updates']['documents'] = [{
+                            'url': row['document_url'].strip(),
+                            'type': row.get('document_type', 'document').strip(),
+                            'description': row.get('document_description', '').strip()
+                        }]
+                    
+                    # Add sellers if provided
+                    if row.get('seller_name'):
+                        task_data['data_updates']['sellers'] = [{
+                            'name': row['seller_name'].strip(),
+                            'type': row.get('seller_type', 'distributor').strip()
+                        }]
+                    
+                    tasks_to_create.append(task_data)
+                    results['successful'] += 1
+                    
+                except Exception as e:
+                    results['validation_errors'].append({
+                        'row': row_num,
+                        'error': str(e)
+                    })
+                    results['failed'] += 1
+            
+            # If validation only, return results without creating tasks
+            if validate_only:
+                results['status'] = 'validation_complete'
+                return results
+            
+            # Create tasks if validation passed
+            if tasks_to_create:
+                batch_results = await self.create_batch_tasks(tasks_to_create, batch_id)
+                results['created_tasks'] = [
+                    task['task_id'] for task in batch_results['successful']
+                ]
+                
+                # Update counters based on actual creation results
+                results['successful'] = len(batch_results['successful'])
+                results['failed'] += len(batch_results['failed'])
+                
+                # Add creation errors to validation errors
+                for failed_task in batch_results['failed']:
+                    results['validation_errors'].append({
+                        'row': failed_task['index'] + 1,
+                        'error': failed_task['error']
+                    })
+            
+            results['status'] = 'success' if results['failed'] == 0 else 'partial_success'
+            return results
+            
+        except Exception as e:
+            raise Exception(f"CSV import failed: {str(e)}")
+
+    async def advanced_search(
+        self,
+        query: Optional[str] = None,
+        filters: Dict[str, Any] = None,
+        sort_by: str = "relevance",
+        page: int = 1,
+        page_size: int = 25
+    ) -> Dict[str, Any]:
+        """
+        Perform advanced search with multiple filters.
+        
+        Args:
+            query: Search term
+            filters: Dictionary of filter criteria
+            sort_by: Sort criteria
+            page: Page number
+            page_size: Items per page
+            
+        Returns:
+            Dictionary with search results and pagination
+        """
+        async with self.AsyncSessionLocal() as session:
+            try:
+                # Build base query
+                base_query = select(PartNumber).join(Product, isouter=True)
+                
+                # Add text search
+                if query:
+                    search_conditions = [
+                        PartNumber.name.ilike(f"%{query}%")
+                    ]
+                    base_query = base_query.where(or_(*search_conditions))
+                
+                # Apply filters
+                if filters:
+                    if filters.get('manufacturer_id'):
+                        base_query = base_query.where(Product.manufacturer_id == filters['manufacturer_id'])
+                    
+                    if filters.get('category_id'):
+                        base_query = base_query.where(Product.category_id == filters['category_id'])
+                    
+                    if filters.get('editor'):
+                        base_query = base_query.where(PartNumber.manual_editor == filters['editor'])
+                    
+                    if filters.get('date_range'):
+                        start_date, end_date = filters['date_range']
+                        base_query = base_query.where(
+                            PartNumber.created_date.between(start_date, end_date)
+                        )
+                    
+                    if filters.get('has_attributes') is not None:
+                        if filters['has_attributes']:
+                            base_query = base_query.join(ProductAttribute, Product.product_id == ProductAttribute.product_id)
+                        else:
+                            base_query = base_query.outerjoin(ProductAttribute, Product.product_id == ProductAttribute.product_id)\
+                                                 .where(ProductAttribute.id.is_(None))
+                    
+                    if filters.get('has_documents') is not None:
+                        if filters['has_documents']:
+                            base_query = base_query.join(DocumentMedia, Product.product_id == DocumentMedia.product_id)
+                        else:
+                            base_query = base_query.outerjoin(DocumentMedia, Product.product_id == DocumentMedia.product_id)\
+                                                 .where(DocumentMedia.id.is_(None))
+                
+                # Apply sorting
+                if sort_by == "name":
+                    base_query = base_query.order_by(PartNumber.name)
+                elif sort_by == "date_desc":
+                    base_query = base_query.order_by(PartNumber.created_date.desc())
+                elif sort_by == "date_asc":
+                    base_query = base_query.order_by(PartNumber.created_date.asc())
+                else:  # relevance or default
+                    base_query = base_query.order_by(PartNumber.updated_date.desc())
+                
+                # Get total count for pagination
+                count_query = select(func.count()).select_from(
+                    base_query.subquery()
+                )
+                total_result = await session.execute(count_query)
+                total_count = total_result.scalar()
+                
+                # Apply pagination
+                offset = (page - 1) * page_size
+                paginated_query = base_query.offset(offset).limit(page_size)
+                
+                # Execute query
+                result = await session.execute(paginated_query)
+                part_numbers = result.scalars().all()
+                
+                # Format results
+                results = []
+                for pn in part_numbers:
+                    # Get associated product
+                    product = await session.scalar(
+                        select(Product).where(Product.part_number == pn.product_id)
+                    )
+                    
+                    # Get manufacturer info
+                    manufacturer = None
+                    if product and product.manufacturer_id:
+                        manufacturer = await session.scalar(
+                            select(Manufacturer).where(Manufacturer.id == product.manufacturer_id)
+                        )
+                    
+                    # Get category info
+                    category = None
+                    if product and product.category_id:
+                        category = await session.scalar(
+                            select(Category).where(Category.id == product.category_id)
+                        )
+                    
+                    # Count attributes and documents
+                    attributes_count = 0
+                    documents_count = 0
+                    if product:
+                        attr_result = await session.execute(
+                            select(func.count(ProductAttribute.id)).where(
+                                ProductAttribute.product_id == product.product_id
+                            )
+                        )
+                        attributes_count = attr_result.scalar()
+                        
+                        doc_result = await session.execute(
+                            select(func.count(DocumentMedia.id)).where(
+                                DocumentMedia.product_id == product.product_id
+                            )
+                        )
+                        documents_count = doc_result.scalar()
+                    
+                    results.append({
+                        'part_number': pn.name,
+                        'product_id': product.product_id if product else None,
+                        'manufacturer': manufacturer.name if manufacturer else None,
+                        'category': category.name if category else None,
+                        'last_updated': pn.updated_date,
+                        'attributes_count': attributes_count,
+                        'documents_count': documents_count
+                    })
+                
+                return {
+                    'results': results,
+                    'pagination': {
+                        'page': page,
+                        'page_size': page_size,
+                        'total_count': total_count,
+                        'total_pages': (total_count + page_size - 1) // page_size
+                    },
+                    'filters_applied': filters or {},
+                    'sort_by': sort_by,
+                    'total_found': total_count
+                }
+                
+            except Exception as e:
+                raise Exception(f"Advanced search failed: {str(e)}")

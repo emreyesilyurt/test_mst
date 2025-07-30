@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Operations Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 150px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.secondary {
+            background-color: #95a5a6;
+        }
+        button.secondary:hover {
+            background-color: #7f8c8d;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .file-input {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .file-input.dragover {
+            border-color: #3498db;
+            background-color: #f8f9fa;
+        }
+        .batch-status {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Batch Operations Test Interface</h1>
+        <p>Test the new batch operation endpoints</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('batch-create')">Batch Create</button>
+        <button class="tab" onclick="showTab('csv-import')">CSV Import</button>
+        <button class="tab" onclick="showTab('advanced-search')">Advanced Search</button>
+        <button class="tab" onclick="showTab('batch-status')">Batch Status</button>
+    </div>
+
+    <!-- Batch Create Tab -->
+    <div id="batch-create" class="tab-content active">
+        <div class="container">
+            <div class="section">
+                <h3>Create Batch Tasks</h3>
+                <p>Test creating multiple tasks in a single batch operation.</p>
+                
+                <div class="form-group">
+                    <label for="batchEditor">Editor *</label>
+                    <input type="text" id="batchEditor" value="test_user" placeholder="Enter editor username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="batchId">Batch ID (optional)</label>
+                    <input type="text" id="batchId" placeholder="Leave empty for auto-generated">
+                </div>
+                
+                <div class="form-group">
+                    <label for="batchTasks">Tasks JSON *</label>
+                    <textarea id="batchTasks" placeholder="Enter tasks JSON array">[
+  {
+    "part_number": "TEST001",
+    "editor": "test_user",
+    "notes": "Test task 1",
+    "attributes": [
+      {
+        "name": "Voltage",
+        "value": "3.3V",
+        "unit": "V"
+      }
+    ]
+  },
+  {
+    "part_number": "TEST002",
+    "editor": "test_user",
+    "notes": "Test task 2",
+    "extras": [
+      {
+        "name": "Package",
+        "value": "SOIC-8"
+      }
+    ]
+  }
+]</textarea>
+                </div>
+                
+                <button onclick="createBatchTasks()">Create Batch Tasks</button>
+                <button class="secondary" onclick="clearBatchForm()">Clear Form</button>
+                
+                <div id="batchCreateResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Import Tab -->
+    <div id="csv-import" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>CSV Import</h3>
+                <p>Test importing tasks from CSV file.</p>
+                
+                <div class="form-group">
+                    <label for="csvEditor">Editor *</label>
+                    <input type="text" id="csvEditor" value="test_user" placeholder="Enter editor username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="csvBatchId">Batch ID (optional)</label>
+                    <input type="text" id="csvBatchId" placeholder="Leave empty for auto-generated">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="validateOnly"> Validate Only (don't create tasks)
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="csvFile">CSV File *</label>
+                    <div class="file-input" id="fileDropZone">
+                        <p>Drag and drop CSV file here or click to select</p>
+                        <input type="file" id="csvFile" accept=".csv" style="display: none;">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Sample CSV Format:</label>
+                    <textarea readonly>part_number,notes,source_url,attribute_name,attribute_value,attribute_unit
+TEST001,Test part 1,https://example.com,Voltage,3.3V,V
+TEST002,Test part 2,https://example.com,Current,100mA,mA</textarea>
+                </div>
+                
+                <button onclick="importCSV()">Import CSV</button>
+                <button onclick="downloadSampleCSV()" class="secondary">Download Sample CSV</button>
+                
+                <div id="csvImportResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Search Tab -->
+    <div id="advanced-search" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>Advanced Search</h3>
+                <p>Test advanced search with multiple filters.</p>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="searchQuery">Search Query</label>
+                        <input type="text" id="searchQuery" placeholder="Enter search term">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="searchEditor">Editor</label>
+                        <input type="text" id="searchEditor" placeholder="Filter by editor">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="searchManufacturer">Manufacturer ID</label>
+                        <input type="number" id="searchManufacturer" placeholder="Manufacturer ID">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="searchCategory">Category ID</label>
+                        <input type="text" id="searchCategory" placeholder="Category ID">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="searchDateFrom">Date From</label>
+                        <input type="datetime-local" id="searchDateFrom">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="searchDateTo">Date To</label>
+                        <input type="datetime-local" id="searchDateTo">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="hasAttributes">Has Attributes</label>
+                        <select id="hasAttributes">
+                            <option value="">Any</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="hasDocuments">Has Documents</label>
+                        <select id="hasDocuments">
+                            <option value="">Any</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="sortBy">Sort By</label>
+                        <select id="sortBy">
+                            <option value="relevance">Relevance</option>
+                            <option value="name">Name</option>
+                            <option value="date_desc">Date (Newest)</option>
+                            <option value="date_asc">Date (Oldest)</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="pageSize">Page Size</label>
+                        <select id="pageSize">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button onclick="performAdvancedSearch()">Search</button>
+                <button class="secondary" onclick="clearSearchForm()">Clear Form</button>
+                
+                <div id="advancedSearchResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Status Tab -->
+    <div id="batch-status" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>Batch Status</h3>
+                <p>Check the status of batch operations.</p>
+                
+                <div class="form-group">
+                    <label for="statusBatchId">Batch ID *</label>
+                    <input type="text" id="statusBatchId" placeholder="Enter batch ID to check">
+                </div>
+                
+                <button onclick="checkBatchStatus()">Check Status</button>
+                <button onclick="cancelBatch()" class="secondary">Cancel Batch</button>
+                
+                <div id="batchStatusResult" class="result" style="display: none;"></div>
+                
+                <div id="batchStatusDisplay" class="batch-status" style="display: none;">
+                    <h4>Batch Status</h4>
+                    <div id="statusInfo"></div>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <div id="progressText">0% Complete</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/manual';
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        async function createBatchTasks() {
+            const editor = document.getElementById('batchEditor').value.trim();
+            const batchId = document.getElementById('batchId').value.trim();
+            const tasksJson = document.getElementById('batchTasks').value.trim();
+            
+            if (!editor || !tasksJson) {
+                showResult('batchCreateResult', 'error', 'Editor and Tasks JSON are required');
+                return;
+            }
+            
+            try {
+                const tasks = JSON.parse(tasksJson);
+                
+                // Ensure all tasks have the editor field
+                tasks.forEach(task => {
+                    task.editor = editor;
+                });
+                
+                const requestData = {
+                    tasks: tasks,
+                    batch_id: batchId || null
+                };
+                
+                const response = await fetch(`${API_BASE}/batch/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('batchCreateResult', 'success', JSON.stringify(result, null, 2));
+                    // Auto-fill batch ID in status tab
+                    document.getElementById('statusBatchId').value = result.batch_id;
+                } else {
+                    showResult('batchCreateResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                if (error instanceof SyntaxError) {
+                    showResult('batchCreateResult', 'error', 'Invalid JSON format in tasks');
+                } else {
+                    showResult('batchCreateResult', 'error', `Network error: ${error.message}`);
+                }
+            }
+        }
+
+        async function importCSV() {
+            const editor = document.getElementById('csvEditor').value.trim();
+            const batchId = document.getElementById('csvBatchId').value.trim();
+            const validateOnly = document.getElementById('validateOnly').checked;
+            const fileInput = document.getElementById('csvFile');
+            
+            if (!editor) {
+                showResult('csvImportResult', 'error', 'Editor is required');
+                return;
+            }
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showResult('csvImportResult', 'error', 'Please select a CSV file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            let url = `${API_BASE}/batch/import-csv/?editor=${encodeURIComponent(editor)}`;
+            if (batchId) url += `&batch_id=${encodeURIComponent(batchId)}`;
+            if (validateOnly) url += `&validate_only=true`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('csvImportResult', 'success', JSON.stringify(result, null, 2));
+                    // Auto-fill batch ID in status tab if created
+                    if (result.batch_id) {
+                        document.getElementById('statusBatchId').value = result.batch_id;
+                    }
+                } else {
+                    showResult('csvImportResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('csvImportResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        async function performAdvancedSearch() {
+            const params = new URLSearchParams();
+            
+            // Add parameters if they have values
+            const query = document.getElementById('searchQuery').value.trim();
+            if (query) params.append('query', query);
+            
+            const editor = document.getElementById('searchEditor').value.trim();
+            if (editor) params.append('editor', editor);
+            
+            const manufacturerId = document.getElementById('searchManufacturer').value.trim();
+            if (manufacturerId) params.append('manufacturer_id', manufacturerId);
+            
+            const categoryId = document.getElementById('searchCategory').value.trim();
+            if (categoryId) params.append('category_id', categoryId);
+            
+            const dateFrom = document.getElementById('searchDateFrom').value;
+            if (dateFrom) params.append('date_from', dateFrom);
+            
+            const dateTo = document.getElementById('searchDateTo').value;
+            if (dateTo) params.append('date_to', dateTo);
+            
+            const hasAttributes = document.getElementById('hasAttributes').value;
+            if (hasAttributes) params.append('has_attributes', hasAttributes);
+            
+            const hasDocuments = document.getElementById('hasDocuments').value;
+            if (hasDocuments) params.append('has_documents', hasDocuments);
+            
+            const sortBy = document.getElementById('sortBy').value;
+            params.append('sort_by', sortBy);
+            
+            const pageSize = document.getElementById('pageSize').value;
+            params.append('page_size', pageSize);
+            
+            try {
+                const response = await fetch(`${API_BASE}/search/advanced/?${params.toString()}`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('advancedSearchResult', 'success', JSON.stringify(result, null, 2));
+                } else {
+                    showResult('advancedSearchResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('advancedSearchResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        async function checkBatchStatus() {
+            const batchId = document.getElementById('statusBatchId').value.trim();
+            
+            if (!batchId) {
+                showResult('batchStatusResult', 'error', 'Batch ID is required');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/batch/${encodeURIComponent(batchId)}/status/`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('batchStatusResult', 'success', JSON.stringify(result, null, 2));
+                    displayBatchStatus(result);
+                } else {
+                    showResult('batchStatusResult', 'error', JSON.stringify(result, null, 2));
+                    hideBatchStatusDisplay();
+                }
+            } catch (error) {
+                showResult('batchStatusResult', 'error', `Network error: ${error.message}`);
+                hideBatchStatusDisplay();
+            }
+        }
+
+        async function cancelBatch() {
+            const batchId = document.getElementById('statusBatchId').value.trim();
+            
+            if (!batchId) {
+                showResult('batchStatusResult', 'error', 'Batch ID is required');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to cancel batch ${batchId}? This will delete all tasks in the batch.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/batch/${encodeURIComponent(batchId)}/`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('batchStatusResult', 'success', JSON.stringify(result, null, 2));
+                    hideBatchStatusDisplay();
+                } else {
+                    showResult('batchStatusResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('batchStatusResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function displayBatchStatus(status) {
+            const display = document.getElementById('batchStatusDisplay');
+            const info = document.getElementById('statusInfo');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            info.innerHTML = `
+                <strong>Batch ID:</strong> ${status.batch_id}<br>
+                <strong>Total Tasks:</strong> ${status.total_tasks}<br>
+                <strong>Completed:</strong> ${status.completed}<br>
+                <strong>Failed:</strong> ${status.failed}<br>
+                <strong>Processing:</strong> ${status.processing}
+            `;
+            
+            const percentage = status.completion_percentage;
+            progressFill.style.width = `${percentage}%`;
+            progressText.textContent = `${percentage.toFixed(1)}% Complete`;
+            
+            display.style.display = 'block';
+        }
+
+        function hideBatchStatusDisplay() {
+            document.getElementById('batchStatusDisplay').style.display = 'none';
+        }
+
+        function downloadSampleCSV() {
+            const csvContent = `part_number,notes,source_url,attribute_name,attribute_value,attribute_unit,extra_name,extra_value,document_url,document_type,seller_name,seller_type
+TEST001,Test part 1,https://example.com/test1,Voltage,3.3V,V,Package,SOIC-8,https://example.com/datasheet1.pdf,datasheet,Digi-Key,distributor
+TEST002,Test part 2,https://example.com/test2,Current,100mA,mA,Form Factor,DIP,https://example.com/datasheet2.pdf,datasheet,Mouser,distributor
+TEST003,Test part 3,https://example.com/test3,Power,500mW,mW,,,,,SparkFun,retailer`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sample_import.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function clearBatchForm() {
+            document.getElementById('batchEditor').value = 'test_user';
+            document.getElementById('batchId').value = '';
+            document.getElementById('batchTasks').value = '';
+            document.getElementById('batchCreateResult').style.display = 'none';
+        }
+
+        function clearSearchForm() {
+            document.getElementById('searchQuery').value = '';
+            document.getElementById('searchEditor').value = '';
+            document.getElementById('searchManufacturer').value = '';
+            document.getElementById('searchCategory').value = '';
+            document.getElementById('searchDateFrom').value = '';
+            document.getElementById('searchDateTo').value = '';
+            document.getElementById('hasAttributes').value = '';
+            document.getElementById('hasDocuments').value = '';
+            document.getElementById('sortBy').value = 'relevance';
+            document.getElementById('pageSize').value = '25';
+            document.getElementById('advancedSearchResult').style.display = 'none';
+        }
+
+        function showResult(elementId, type, message) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        // File drop zone functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('fileDropZone');
+            const fileInput = document.getElementById('csvFile');
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].name.toLowerCase().endsWith('.csv')) {
+                    fileInput.files = files;
+                    dropZone.innerHTML = `<p>Selected: ${files[0].name}</p>`;
+                } else {
+                    alert('Please drop a CSV file');
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    dropZone.innerHTML = `<p>Selected: ${e.target.files[0].name}</p>`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('
