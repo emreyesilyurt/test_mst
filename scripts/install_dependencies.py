@@ -45,7 +45,7 @@ def main():
         print("\n🔧 Next steps:")
         print("1. Set up your .env file with database credentials")
         print("2. Set RUN_MODE=test in .env")
-        print("3. Run: python update_test_schema.py")
+        print("3. Run: python scripts/update_test_schema.py")
         print("4. Run: python run_server.py")
 
 if __name__ == "__main__":

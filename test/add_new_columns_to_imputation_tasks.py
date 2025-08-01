@@ -5,8 +5,14 @@ This preserves all existing data while adding the new tracking functionality.
 """
 
 import asyncio
+import sys
+import os
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker
+
+# Add the parent directory to the path so we can import from src
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.db.connections import get_supabase_async_engine
 
 async def add_columns_to_imputation_tasks():

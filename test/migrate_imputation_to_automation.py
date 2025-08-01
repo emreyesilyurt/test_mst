@@ -8,8 +8,14 @@ This script will:
 """
 
 import asyncio
+import sys
+import os
 from sqlalchemy import text, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+# Add the parent directory to the path so we can import from src
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.db.connections import get_supabase_async_engine
 from src.db.models import (
     AutomationTask, DocumentMedia, ProductSeller, 

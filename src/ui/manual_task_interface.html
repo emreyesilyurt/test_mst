@@ -197,7 +197,9 @@
         <button class="tab active" onclick="showTab('simple')">Simple Task</button>
         <button class="tab" onclick="showTab('process')">Process Task</button>
         <button class="tab" onclick="showTab('create')">Full Create</button>
+        <button class="tab" onclick="showTab('batch')">Batch Operations</button>
         <button class="tab" onclick="showTab('search')">Search Parts</button>
+        <button class="tab" onclick="showTab('advanced-search')">Advanced Search</button>
         <button class="tab" onclick="showTab('tasks')">View Tasks</button>
         <button class="tab" onclick="showTab('product')">Product Details</button>
     </div>
@@ -363,6 +365,122 @@
         </div>
     </div>
 
+    <!-- Batch Operations Tab -->
+    <div id="batch" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>Batch Create Tasks</h3>
+                <p style="color: #666; margin-bottom: 20px;">Create multiple tasks in a single operation using JSON format.</p>
+                
+                <div class="form-group">
+                    <label for="batchEditor">Editor *</label>
+                    <input type="text" id="batchEditor" value="demo_user" placeholder="Enter editor username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="batchIdCreate">Batch ID (optional)</label>
+                    <input type="text" id="batchIdCreate" placeholder="Leave empty for auto-generated">
+                </div>
+                
+                <div class="form-group">
+                    <label for="batchTasks">Tasks JSON *</label>
+                    <textarea id="batchTasks" style="height: 200px; font-family: monospace;" placeholder="Enter tasks JSON array">[
+  {
+    "part_number": "TEST001",
+    "editor": "demo_user",
+    "notes": "Test task 1",
+    "attributes": [
+      {
+        "name": "Voltage",
+        "value": "3.3V",
+        "unit": "V"
+      }
+    ]
+  },
+  {
+    "part_number": "TEST002",
+    "editor": "demo_user",
+    "notes": "Test task 2",
+    "extras": [
+      {
+        "name": "Package",
+        "value": "SOIC-8"
+      }
+    ]
+  }
+]</textarea>
+                </div>
+                
+                <button onclick="createBatchTasks()">Create Batch Tasks</button>
+                <button class="secondary" onclick="clearBatchForm()">Clear Form</button>
+                
+                <div id="batchCreateResult" class="result" style="display: none;"></div>
+            </div>
+
+            <div class="section">
+                <h3>CSV Import</h3>
+                <p style="color: #666; margin-bottom: 20px;">Import tasks from CSV file.</p>
+                
+                <div class="form-group">
+                    <label for="csvEditor">Editor *</label>
+                    <input type="text" id="csvEditor" value="demo_user" placeholder="Enter editor username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="csvBatchId">Batch ID (optional)</label>
+                    <input type="text" id="csvBatchId" placeholder="Leave empty for auto-generated">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="validateOnly" style="width: auto; margin-right: 5px;"> Validate Only (don't create tasks)
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="csvFile">CSV File *</label>
+                    <input type="file" id="csvFile" accept=".csv">
+                </div>
+                
+                <div class="form-group">
+                    <label>Sample CSV Format:</label>
+                    <textarea readonly style="height: 80px; font-family: monospace;">part_number,notes,source_url,attribute_name,attribute_value,attribute_unit
+TEST001,Test part 1,https://example.com,Voltage,3.3V,V
+TEST002,Test part 2,https://example.com,Current,100mA,mA</textarea>
+                </div>
+                
+                <button onclick="importCSV()">Import CSV</button>
+                <button onclick="downloadSampleCSV()" class="secondary">Download Sample CSV</button>
+                
+                <div id="csvImportResult" class="result" style="display: none;"></div>
+            </div>
+
+            <div class="section">
+                <h3>Batch Status</h3>
+                <p style="color: #666; margin-bottom: 20px;">Check the status of batch operations.</p>
+                
+                <div class="form-group">
+                    <label for="statusBatchId">Batch ID *</label>
+                    <input type="text" id="statusBatchId" placeholder="Enter batch ID to check">
+                </div>
+                
+                <button onclick="checkBatchStatus()">Check Status</button>
+                <button onclick="cancelBatch()" class="secondary">Cancel Batch</button>
+                
+                <div id="batchStatusResult" class="result" style="display: none;"></div>
+                
+                <div id="batchStatusDisplay" style="display: none; background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 15px;">
+                    <h4>Batch Status</h4>
+                    <div id="statusInfo"></div>
+                    <div style="width: 100%; height: 20px; background-color: #e9ecef; border-radius: 10px; overflow: hidden; margin: 10px 0;">
+                        <div id="progressFill" style="height: 100%; background-color: #28a745; transition: width 0.3s ease; width: 0%;"></div>
+                    </div>
+                    <div id="progressText">0% Complete</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Create Task Tab -->
     <div id="create" class="tab-content">
         <div class="container">
@@ -457,6 +575,94 @@
             <button class="secondary" onclick="clearForm()">Clear Form</button>
             
             <div id="createResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Advanced Search Tab -->
+    <div id="advanced-search" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h3>Advanced Search</h3>
+                <p style="color: #666; margin-bottom: 20px;">Search with multiple filters and sorting options.</p>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="advSearchQuery">Search Query</label>
+                        <input type="text" id="advSearchQuery" placeholder="Enter search term">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="advSearchEditor">Editor</label>
+                        <input type="text" id="advSearchEditor" placeholder="Filter by editor">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="advSearchManufacturer">Manufacturer ID</label>
+                        <input type="number" id="advSearchManufacturer" placeholder="Manufacturer ID">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="advSearchCategory">Category ID</label>
+                        <input type="text" id="advSearchCategory" placeholder="Category ID">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="advSearchDateFrom">Date From</label>
+                        <input type="datetime-local" id="advSearchDateFrom">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="advSearchDateTo">Date To</label>
+                        <input type="datetime-local" id="advSearchDateTo">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="advHasAttributes">Has Attributes</label>
+                        <select id="advHasAttributes">
+                            <option value="">Any</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="advHasDocuments">Has Documents</label>
+                        <select id="advHasDocuments">
+                            <option value="">Any</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="advSortBy">Sort By</label>
+                        <select id="advSortBy">
+                            <option value="relevance">Relevance</option>
+                            <option value="name">Name</option>
+                            <option value="date_desc">Date (Newest)</option>
+                            <option value="date_asc">Date (Oldest)</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="advPageSize">Page Size</label>
+                        <select id="advPageSize">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button onclick="performAdvancedSearch()">Search</button>
+                <button class="secondary" onclick="clearAdvancedSearchForm()">Clear Form</button>
+                
+                <div id="advancedSearchResult" class="result" style="display: none;"></div>
+            </div>
         </div>
     </div>
 
@@ -1542,6 +1748,273 @@
             } catch (error) {
                 showResult('processResult', 'error', `Network error: ${error.message}`);
             }
+        }
+
+        // ================================
+        // BATCH OPERATIONS FUNCTIONS
+        // ================================
+
+        async function createBatchTasks() {
+            const editor = document.getElementById('batchEditor').value.trim();
+            const batchId = document.getElementById('batchIdCreate').value.trim();
+            const tasksJson = document.getElementById('batchTasks').value.trim();
+            
+            if (!editor || !tasksJson) {
+                showResult('batchCreateResult', 'error', 'Editor and Tasks JSON are required');
+                return;
+            }
+            
+            try {
+                const tasks = JSON.parse(tasksJson);
+                
+                // Ensure all tasks have the editor field
+                tasks.forEach(task => {
+                    task.editor = editor;
+                });
+                
+                const requestData = {
+                    tasks: tasks,
+                    batch_id: batchId || null
+                };
+                
+                const response = await fetch(`${API_BASE}/batch/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('batchCreateResult', 'success', JSON.stringify(result, null, 2));
+                    // Auto-fill batch ID in status tab
+                    document.getElementById('statusBatchId').value = result.batch_id;
+                } else {
+                    showResult('batchCreateResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                if (error instanceof SyntaxError) {
+                    showResult('batchCreateResult', 'error', 'Invalid JSON format in tasks');
+                } else {
+                    showResult('batchCreateResult', 'error', `Network error: ${error.message}`);
+                }
+            }
+        }
+
+        async function importCSV() {
+            const editor = document.getElementById('csvEditor').value.trim();
+            const batchId = document.getElementById('csvBatchId').value.trim();
+            const validateOnly = document.getElementById('validateOnly').checked;
+            const fileInput = document.getElementById('csvFile');
+            
+            if (!editor) {
+                showResult('csvImportResult', 'error', 'Editor is required');
+                return;
+            }
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showResult('csvImportResult', 'error', 'Please select a CSV file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            let url = `${API_BASE}/batch/import-csv/?editor=${encodeURIComponent(editor)}`;
+            if (batchId) url += `&batch_id=${encodeURIComponent(batchId)}`;
+            if (validateOnly) url += `&validate_only=true`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('csvImportResult', 'success', JSON.stringify(result, null, 2));
+                    // Auto-fill batch ID in status tab if created
+                    if (result.batch_id) {
+                        document.getElementById('statusBatchId').value = result.batch_id;
+                    }
+                } else {
+                    showResult('csvImportResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('csvImportResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        async function checkBatchStatus() {
+            const batchId = document.getElementById('statusBatchId').value.trim();
+            
+            if (!batchId) {
+                showResult('batchStatusResult', 'error', 'Batch ID is required');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/batch/${encodeURIComponent(batchId)}/status/`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('batchStatusResult', 'success', JSON.stringify(result, null, 2));
+                    displayBatchStatus(result);
+                } else {
+                    showResult('batchStatusResult', 'error', JSON.stringify(result, null, 2));
+                    hideBatchStatusDisplay();
+                }
+            } catch (error) {
+                showResult('batchStatusResult', 'error', `Network error: ${error.message}`);
+                hideBatchStatusDisplay();
+            }
+        }
+
+        async function cancelBatch() {
+            const batchId = document.getElementById('statusBatchId').value.trim();
+            
+            if (!batchId) {
+                showResult('batchStatusResult', 'error', 'Batch ID is required');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to cancel batch ${batchId}? This will delete all tasks in the batch.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/batch/${encodeURIComponent(batchId)}/`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('batchStatusResult', 'success', JSON.stringify(result, null, 2));
+                    hideBatchStatusDisplay();
+                } else {
+                    showResult('batchStatusResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('batchStatusResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function displayBatchStatus(status) {
+            const display = document.getElementById('batchStatusDisplay');
+            const info = document.getElementById('statusInfo');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            info.innerHTML = `
+                <strong>Batch ID:</strong> ${status.batch_id}<br>
+                <strong>Total Tasks:</strong> ${status.total_tasks}<br>
+                <strong>Completed:</strong> ${status.completed}<br>
+                <strong>Failed:</strong> ${status.failed}<br>
+                <strong>Processing:</strong> ${status.processing}
+            `;
+            
+            const percentage = status.completion_percentage;
+            progressFill.style.width = `${percentage}%`;
+            progressText.textContent = `${percentage.toFixed(1)}% Complete`;
+            
+            display.style.display = 'block';
+        }
+
+        function hideBatchStatusDisplay() {
+            document.getElementById('batchStatusDisplay').style.display = 'none';
+        }
+
+        function downloadSampleCSV() {
+            const csvContent = `part_number,notes,source_url,attribute_name,attribute_value,attribute_unit,extra_name,extra_value,document_url,document_type,seller_name,seller_type
+TEST001,Test part 1,https://example.com/test1,Voltage,3.3V,V,Package,SOIC-8,https://example.com/datasheet1.pdf,datasheet,Digi-Key,distributor
+TEST002,Test part 2,https://example.com/test2,Current,100mA,mA,Form Factor,DIP,https://example.com/datasheet2.pdf,datasheet,Mouser,distributor
+TEST003,Test part 3,https://example.com/test3,Power,500mW,mW,,,,,SparkFun,retailer`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sample_import.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function clearBatchForm() {
+            document.getElementById('batchEditor').value = 'demo_user';
+            document.getElementById('batchIdCreate').value = '';
+            document.getElementById('batchTasks').value = '';
+            document.getElementById('batchCreateResult').style.display = 'none';
+        }
+
+        // ================================
+        // ADVANCED SEARCH FUNCTIONS
+        // ================================
+
+        async function performAdvancedSearch() {
+            const params = new URLSearchParams();
+            
+            // Add parameters if they have values
+            const query = document.getElementById('advSearchQuery').value.trim();
+            if (query) params.append('query', query);
+            
+            const editor = document.getElementById('advSearchEditor').value.trim();
+            if (editor) params.append('editor', editor);
+            
+            const manufacturerId = document.getElementById('advSearchManufacturer').value.trim();
+            if (manufacturerId) params.append('manufacturer_id', manufacturerId);
+            
+            const categoryId = document.getElementById('advSearchCategory').value.trim();
+            if (categoryId) params.append('category_id', categoryId);
+            
+            const dateFrom = document.getElementById('advSearchDateFrom').value;
+            if (dateFrom) params.append('date_from', dateFrom);
+            
+            const dateTo = document.getElementById('advSearchDateTo').value;
+            if (dateTo) params.append('date_to', dateTo);
+            
+            const hasAttributes = document.getElementById('advHasAttributes').value;
+            if (hasAttributes) params.append('has_attributes', hasAttributes);
+            
+            const hasDocuments = document.getElementById('advHasDocuments').value;
+            if (hasDocuments) params.append('has_documents', hasDocuments);
+            
+            const sortBy = document.getElementById('advSortBy').value;
+            params.append('sort_by', sortBy);
+            
+            const pageSize = document.getElementById('advPageSize').value;
+            params.append('page_size', pageSize);
+            
+            try {
+                const response = await fetch(`${API_BASE}/search/advanced/?${params.toString()}`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('advancedSearchResult', 'success', JSON.stringify(result, null, 2));
+                } else {
+                    showResult('advancedSearchResult', 'error', JSON.stringify(result, null, 2));
+                }
+            } catch (error) {
+                showResult('advancedSearchResult', 'error', `Network error: ${error.message}`);
+            }
+        }
+
+        function clearAdvancedSearchForm() {
+            document.getElementById('advSearchQuery').value = '';
+            document.getElementById('advSearchEditor').value = '';
+            document.getElementById('advSearchManufacturer').value = '';
+            document.getElementById('advSearchCategory').value = '';
+            document.getElementById('advSearchDateFrom').value = '';
+            document.getElementById('advSearchDateTo').value = '';
+            document.getElementById('advHasAttributes').value = '';
+            document.getElementById('advHasDocuments').value = '';
+            document.getElementById('advSortBy').value = 'relevance';
+            document.getElementById('advPageSize').value = '25';
+            document.getElementById('advancedSearchResult').style.display = 'none';
         }
 
         // Initialize with some sample data

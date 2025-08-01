@@ -5,6 +5,12 @@ This shows how to use the enhanced TaskAutomator with automation task tracking.
 """
 
 import asyncio
+import sys
+import os
+
+# Add the parent directory to the path so we can import from src
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.tasks.automation.automate_tasks import TaskAutomator
 
 async def example_single_part_processing():

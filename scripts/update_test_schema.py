@@ -9,10 +9,14 @@ This script will:
 """
 
 import os
+import sys
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.ext.asyncio import create_async_engine
 import asyncio
+
+# Add the parent directory to the path so we can import from src
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Load environment variables
 load_dotenv()

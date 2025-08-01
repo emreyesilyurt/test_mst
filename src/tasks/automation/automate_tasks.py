@@ -1033,17 +1033,22 @@ def get_bq_wr_supabase():
     """
     asyncio.run(get_bq_wr_supabase_async())
 
+# if __name__ == "__main__":
+#     import sys
+    
+#     # Check if user wants to specify max concurrent tasks
+#     max_concurrent = 10  # default
+#     if len(sys.argv) > 1:
+#         try:
+#             max_concurrent = int(sys.argv[1])
+#             progress_logger.info(f"Using max concurrent tasks: {max_concurrent}")
+#         except ValueError:
+#             progress_logger.warning(f"Invalid concurrent tasks argument: {sys.argv[1]}, using default: {max_concurrent}")
+    
+#     # Run the async version directly for better performance
+#     asyncio.run(get_bq_wr_supabase_async(max_concurrent))
+
+
 if __name__ == "__main__":
-    import sys
-    
-    # Check if user wants to specify max concurrent tasks
-    max_concurrent = 10  # default
-    if len(sys.argv) > 1:
-        try:
-            max_concurrent = int(sys.argv[1])
-            progress_logger.info(f"Using max concurrent tasks: {max_concurrent}")
-        except ValueError:
-            progress_logger.warning(f"Invalid concurrent tasks argument: {sys.argv[1]}, using default: {max_concurrent}")
-    
-    # Run the async version directly for better performance
-    asyncio.run(get_bq_wr_supabase_async(max_concurrent))
+    ss = fetch_all_data_sorted(limit=21)
+    print(ss)
